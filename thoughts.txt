@@ -1,0 +1,72 @@
+fundamental thingies:
+ - income
+ - Tech tree
+ - Population
+ - conversions
+ - Battles
+ - Pantheons
+
+how to implement this:
+ - research
+    - function to attempt to research item at cost and percentage, with priest boolean
+    - get bonuses from player profile
+    - individual functions to run the main research function, allow priest option
+        - divine inspiration
+        - dream revelation
+        - awake revelation
+        - divine avatar
+ - population
+    - population is stored in player profile
+    - passive growth, work into new turn mechanic
+    - amount of unit types stored in player profile
+    - assume infinite neutral units
+ - battle
+    - TO BE CONSTRUCTED - I NEED DOUBLE FOR THIS
+ - income
+    - income function, taking into account bonuses, functionals, and priests.
+    - run this function for each player in new turn function
+
+ - list of stats by player (set it up so it's both current and base)
+    - name of player
+    - pantheon
+    - priests
+    - soldiers
+    - functionaries
+    - total amount converted
+    - total priests poached
+    - total soldiers destroyed
+    - total population massacred (offense)
+    - battle-related
+        - values of attack, defense, initiative and armor
+    - tech
+        - cost (as in % of original cost, increases proportional to population)
+        - research rate (as in % of original rate, or bonus of initial rate)
+    - Population
+        - passive population growth rate
+        - income per functional
+        - income per (functional,priest)
+        - income per soldier
+    - priests
+        - max channeling
+        - priest research bonus rate
+    - conversions
+        - conversion success rate
+
+ - conversions
+    - function for each type of attempted conversion
+    - calculates conversion success rate based upon bonuses
+ - list of bonuses by player
+ - list of different amounts of unit types by player
+        - priests
+        - soldiers
+        - functionaries
+ - priests
+    - keep track of total priest count, and of total channeling remaining per turn
+ - pantheons
+    - keep track of pantheons (pantheon id and put in player profile?)
+    - modify getBonus function to get both
+ - new turn function
+    - check current bonuses
+    - run income
+    - reset priest channeling
+
