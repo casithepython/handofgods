@@ -11,6 +11,7 @@ CREATE TABLE players (
     priests INTEGER DEFAULT 0,
     soldiers INTEGER DEFAULT 0,
     functionaries INTEGER DEFAULT 1000,
+    power INTEGER DEFAULT 0,
     /* the following are just fun stats with no current in-game purpose */
     total_converted INTEGER DEFAULT 0,
     total_poached INTEGER DEFAULT 0,
