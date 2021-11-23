@@ -19,7 +19,7 @@ attributes = [
     # Research
     "research_cost_multiplier",
     "divine_inspiration_rate",
-    "divine_inspiration_cost"
+    "divine_inspiration_cost",
     "awake_revelation_rate",
     "awake_revelation_cost",
     "asleep_revelation_rate",
@@ -39,13 +39,13 @@ attributes = [
     # Conversion
     "enemy_conversion_rate",
     "enemy_conversion_cost",
-    "neutral_conversion_rate"
+    "neutral_conversion_rate",
     "neutral_conversion_cost",
     "enemy_priest_conversion_rate",
     "enemy_priest_conversion_cost",
 
     # Pantheons
-    "pantheon_bonus_multiplier"
+    "pantheon_bonus_multiplier",
     
     # Miscellaneous
     "maximum_priest_channeling",
