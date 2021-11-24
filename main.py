@@ -132,6 +132,13 @@ def new_user(name, discord_id):
 def user_is_admin(discord_id):
     return discord_id in [262098148283908099,466015764919353346]
 
+def get_discord_id_by_name(name):
+    connect()
+    cursor.execute("SELECT discord_id FROM players WHERE LOWER(name) = ?", (name.lower(),))
+    player_id = cursor.fetchone()[0]
+    disconnect()
+    return player_id
+
 def get_player_id(discord_id):
     connect()
     cursor.execute("SELECT id FROM players WHERE discord_id = ?", (discord_id,))
