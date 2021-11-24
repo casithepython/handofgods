@@ -2,16 +2,32 @@ from discord.ext import commands
 import logging
 import SecretManager
 
-# import main as server
+import main as db
+
+debug_mode = True
 
 research_cache = {}
 
 bot = commands.Bot(command_prefix="?")
 
 @bot.command()
-async def research(ctx, tech_name):
+async def research(ctx, *, tech_name):
+  tech_id = db.get_tech_id(tech_name)
+  player_id = db.get_player_id(ctx.author.id)
+
+  if tech_id is None:
+    await ctx.send('Technology "{}" does not exist.'.format(tech_name))
+    return
+  elif player_id is None:
+    await ctx.send('You have not joined this game yet.')
+    return
+  else:
+    output_text = 'Attempt research of the technology "{}": react with :regional_indicator_a: for divine inspiration, '.format(tech_name)
+    await ctx.send(output_text)
+    
+    pass
+    
   # ctx.author.id
-  pass
 
 @bot.command()
 async def battle(ctx, player_name, soldier_count):
