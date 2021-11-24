@@ -20,18 +20,11 @@ def disconnect():
     connection.close()
 
 
+# TODO: admin users
+
 # ----------------------------------------
 # User management
 # ----------------------------------------
-@app.route("/create_user", methods=["POST"])
-def create_user():  # put application's code here
-    req = request.get_json()
-    name = req.get('name')
-    player_id = req.get('id')
-
-    return make_response(new_user(name, player_id), 200)
-
-
 def new_user(name, discord_id):
     if discord_id not in get_discord_ids():
         connect()
@@ -91,13 +84,7 @@ def new_user(name, discord_id):
     else:
         return False
 
-
-@app.route("/get_player_id", methods=["GET"])
-def get_player_id():
-    return make_response(get_id(request.args.get("id")), 200)
-
-
-def get_id(discord_id):
+def get_player_id(discord_id):
     connect()
     cursor.execute("SELECT id FROM players WHERE discord_id = ?", (discord_id,))
     player_id = cursor.fetchone()[0]
@@ -107,11 +94,6 @@ def get_id(discord_id):
 
 def get_research_cost_multiplier(player_id):
     return get_attribute(player_id, 5)
-
-
-@app.route("/get_players", methods=["GET"])
-def get_players():
-    return make_response(jsonify(get_discord_ids()), 200)
 
 
 def get_discord_ids():
@@ -145,11 +127,6 @@ def spend_power(player_id, power):
 # ----------------------------------------
 # Attributes
 # ----------------------------------------
-@app.route("/get_stat_id", methods=["GET"])
-def get_stat_id():
-    return make_response(get_attribute_id(request.args.get("name")), 200)
-
-
 def get_attribute_id(name):
     connect()
     cursor.execute("SELECT id FROM attributes WHERE name = ?", (name,))
@@ -163,7 +140,7 @@ def get_attribute(player_id, attribute_id):
     cursor.execute(
         "SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
         "expiry_turn>?) AND start_turn<=?",
-        (player_id, attribute_id, current_turn(),current_turn()))
+        (player_id, attribute_id, current_turn(), current_turn()))
     value = cursor.fetchone()[0]
     disconnect()
     return value
@@ -172,8 +149,10 @@ def get_attribute(player_id, attribute_id):
 # ----------------------------------------
 # Tech
 # ----------------------------------------
-def new_tech(name, description, cost, bonuses, chance_multiplier=1):
+def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
     # bonuses should be formatted as [[tech_1_id,value1],[tech_2_id,value2]]
+    if bonuses is None:
+        bonuses = []
     if name not in get_tech_names():
         connect()
         cursor.execute("INSERT INTO tech (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
@@ -187,6 +166,34 @@ def new_tech(name, description, cost, bonuses, chance_multiplier=1):
         return True
     else:
         return False
+
+
+def add_tech_bonus(tech_id, attribute_id, value):
+    connect()
+    cursor.execute("SELECT value FROM tech_bonuses WHERE tech_id = ? AND attribute_id = ?", (tech_id, attribute_id))
+    possible_value = cursor.fetchone()
+    disconnect()
+    if possible_value:
+        return False, "already has bonus"
+    else:
+        connect()
+        cursor.execute("INSERT INTO tech_bonuses (tech_id, attribute_id, value) values (?,?,?)",
+                       (tech_id, attribute_id, value))
+        disconnect()
+    return True
+
+
+def update_tech_bonus(tech_id, attribute_id, value):
+    connect()
+    cursor.execute("SELECT value FROM tech_bonuses WHERE tech_id = ? AND attribute_id = ?", (tech_id, attribute_id))
+    possible_value = cursor.fetchone()
+    disconnect()
+    if possible_value:
+        connect()
+        cursor.execute("UPDATE tech_bonuses SET value = ? WHERE attribute_id = ? AND tech_id = ?",
+                       (value, attribute_id, tech_id))
+    else:
+        return False, "no existing bonus"
 
 
 def get_tech_cost(tech_id):
@@ -223,24 +230,6 @@ def get_player_tech(player_id):
 # ----------------------------------------
 # Research
 # ----------------------------------------
-@app.route("/research", methods=["POST"])
-def research():
-    req = request.get_json()
-    player_id = req.get("player_id")
-    tech_id = req.get("tech_id")
-    method = req.get("method")
-    if attempt_research(player_id, tech_id, method):
-        return make_response("Research succeeded.", 200)
-    else:
-        return make_response("Research failed.", 200)
-
-
-def calculate_cost(player_id, tech_id):
-    base_cost = get_tech_cost(tech_id)
-    player_cost_multiplier = get_research_cost_multiplier(player_id)
-    return base_cost * player_cost_multiplier
-
-
 def attempt_research(player_id, tech_id, method):
     if tech_id not in get_player_tech(player_id):
         if method == "divine_inspiration":
@@ -273,6 +262,12 @@ def attempt_research(player_id, tech_id, method):
         return False, "already researched"
 
 
+def calculate_cost(player_id, tech_id):
+    base_cost = get_tech_cost(tech_id)
+    player_cost_multiplier = get_research_cost_multiplier(player_id)
+    return base_cost * player_cost_multiplier
+
+
 def complete_research(player_id, tech_id):
     connect()
     cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
@@ -286,10 +281,10 @@ def complete_research(player_id, tech_id):
 # Turns
 def current_turn():
     connect()
-    cursor.execute("select value from system_variables where name = ?",("turn,"))
+    cursor.execute("select value from system_variables where name = ?", ("turn",))
 
 
-new_user("casi", 466015764919353346)
-
+# new_user("casi", 466015764919353346)
+print(add_tech_bonus(1, 1, 1))
 '''if __name__ == '__main__':
     app.run()'''
