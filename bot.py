@@ -26,15 +26,24 @@ async def research(ctx, *, tech_name):
     return
   else:
     # Phase 1: output text
-    output_text = 'Attempt research of the technology "{tech_name}":\n' \
-    ':regional_indicator_a: for divine inspiration (success probability {div_inspr_prob:.1%})\n'\
-    ':regional_indicator_b: for waking revalation (success probability {awake_rev_prob:.1%})\n'\
-    ':regional_indicator_c: for dream revalation (success probability {dream_rev_prob:.1%})\n'\
-    ':regional_indicator_d: to incarnate and command research (success probability {divine_avatar_prob:.1%})\n'\
+    success_cost = db.calculate_tech_cost(player_id, tech_id)
+    multiplier = db.get_research_cost_multiplier(player_id)
+    attempt_costs = tuple(map(lambda x: db.get_attribute(player_id, x) * multiplier, (
+      db.Attributes.DIVINE_INSPIRATION_COST,
+      db.Attributes.AWAKE_REVELATION_COST,
+      db.Attributes.ASLEEP_REVELATION_COST,
+      db.Attributes.DIVINE_AVATAR_COST
+    )))
+    output_text = 'Attempt research of the technology "{tech_name}" (success cost {success_cost}):\n'\
+    ':regional_indicator_a: for divine inspiration (success probability {div_inspr_prob:.1%}, attempt cost {attempt_costs[0]})\n'\
+    ':regional_indicator_b: for waking revalation (success probability {awake_rev_prob:.1%}, attempt cost {attempt_costs[1]})\n'\
+    ':regional_indicator_c: for dream revalation (success probability {dream_rev_prob:.1%}, attempt cost {attempt_costs[2]})\n'\
+    ':regional_indicator_d: to incarnate and command research (success probability {divine_avatar_prob:.1%}, attempt cost {attempt_costs[3]})'\
       .format(tech_name=tech_name, div_inspr_prob=db.get_attribute(player_id, db.Attributes.DIVINE_INSPIRATION_RATE),
             awake_rev_prob=db.get_attribute(player_id, db.Attributes.AWAKE_REVELATION_RATE),
             dream_rev_prob=db.get_attribute(player_id, db.Attributes.ASLEEP_REVELATION_RATE),
-            divine_avatar_prob=db.get_attribute(player_id, db.Attributes.DIVINE_AVATAR_RATE)
+            divine_avatar_prob=db.get_attribute(player_id, db.Attributes.DIVINE_AVATAR_RATE),
+            success_cost=success_cost, attempt_costs=attempt_costs
             )
     message = await ctx.send(output_text)
     reactions = {
@@ -64,7 +73,7 @@ async def research(ctx, *, tech_name):
         if reaction != emoji:
           await message.remove_reaction(reaction, ctx.me)
 
-      
+      db.attempt_research(player_id, tech_id, reactions[emoji])
     except TimeoutError:
       ctx.send("Timed out")
     
