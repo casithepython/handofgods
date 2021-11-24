@@ -53,21 +53,21 @@ class Attributes:
     TOTAL_SPENT = 42
     TOTAL_INCOME = 43
 
+class transaction:
+    def __init__(self):
+        pass
+    def __enter__(self):
+        self.__connection = sqlite3.connect("HandOfGods.db")
+        self.__connection.row_factory = sqlite3.Row
+        self.cursor = self.__connection.cursor()
+        return self.cursor
+    def __exit__(self, exc_type, exc_value):
+        self.__connection.commit()
+        self.__connection.close()
 
 # TODO: Pantheons
 # TODO: battle
 # TODO: new turn function
-def connect():
-    global connection
-    global cursor
-    connection = sqlite3.connect("HandOfGods.db")
-    connection.row_factory = sqlite3.Row
-    cursor = connection.cursor()
-
-
-def disconnect():
-    connection.commit()
-    connection.close()
 
 
 # ----------------------------------------
@@ -75,59 +75,58 @@ def disconnect():
 # ----------------------------------------
 def new_user(name, discord_id):
     if discord_id not in get_discord_ids() and name not in list(map(lambda a: a.lower(), get_player_names())):
-        connect()
-        cursor.execute('INSERT INTO players (name,discord_id,tech) VALUES (?,?,?)', (name, discord_id, json.dumps([])))
-        cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
-        player_id = cursor.fetchone()[0]
-        defaults = {
-            Attributes.ATTACK: 0,
-            Attributes.DEFENSE: 0,
-            Attributes.INITIATIVE: 0,
-            Attributes.ARMOR: 0,
-            Attributes.ARMOUR: 1,
-            Attributes.RESEARCH_COST_MULTIPLIER: 0.05,
-            Attributes.DIVINE_INSPIRATION_RATE: 5,
-            Attributes.DIVINE_INSPIRATION_COST: 0.2,
-            Attributes.AWAKE_REVELATION_RATE: 50,
-            Attributes.AWAKE_REVELATION_COST: 0.1,
-            Attributes.ASLEEP_REVELATION_RATE: 20,
-            Attributes.ASLEEP_REVELATION_COST: 0.7,
-            Attributes.DIVINE_AVATAR_RATE: 100,
-            Attributes.DIVINE_AVATAR_COST: 0.2,
-            Attributes.PRIEST_RESEARCH_BONUS: 0.13,
-            Attributes.PASSIVE_POPULATION_GROWTH_RATE: 1,
-            Attributes.INCOME_PER_FUNCTIONAL: 0,
-            Attributes.INCOME_PER_SOLDIER: 0,
-            Attributes.INCOME_PER_PRIEST: 1,
-            Attributes.BONUS_POWER_PER_FUNCTIONAL: 5,
-            Attributes.PRIEST_INCOME_BOOST_CAPACITY: 0.1,
-            Attributes.ENEMY_CONVERSION_RATE: 2,
-            Attributes.ENEMY_CONVERSION_COST: 0.2,
-            Attributes.NEUTRAL_CONVERSION_RATE: 1,
-            Attributes.NEUTRAL_CONVERSION_COST: 0.05,
-            Attributes.ENEMY_PRIEST_CONVERSION_RATE: 5,
-            Attributes.ENEMY_PRIEST_CONVERSION_COST: 0.5,
-            Attributes.PANTHEON_BONUS_MULTIPLIER: 200,
-            Attributes.MAXIMUM_PRIEST_CHANNELING: 10,
-            Attributes.PRIEST_COST: 0,
-            Attributes.SOLDIER_COST: 0,
-            Attributes.SOLDIER_DISBAND_COST: 0,
-            Attributes.PRIESTS: 0,
-            Attributes.SOLDIERS: 1000,
-            Attributes.FUNCTIONARIES: 0,
-            Attributes.POWER: 0,
-            Attributes.TOTAL_CONVERTED: 0,
-            Attributes.TOTAL_POACHED: 0,
-            Attributes.TOTAL_DESTROYED: 0,
-            Attributes.TOTAL_LOST: 0,
-            Attributes.TOTAL_MASSACRED: 0,
-            Attributes.TOTAL_POPULATION_LOST: 0,
-            Attributes.TOTAL_SPENT: 0
-        }
-        for attribute_id, value in defaults.items:
-            cursor.execute("INSERT INTO player_attributes (player_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
-                           (player_id, attribute_id, value, -1))
-        disconnect()
+        with transaction() as cursor:
+            cursor.execute('INSERT INTO players (name,discord_id,tech) VALUES (?,?,?)', (name, discord_id, json.dumps([])))
+            cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
+            player_id = cursor.fetchone()[0]
+            defaults = {
+                Attributes.ATTACK: 0,
+                Attributes.DEFENSE: 0,
+                Attributes.INITIATIVE: 0,
+                Attributes.ARMOR: 0,
+                Attributes.ARMOUR: 1,
+                Attributes.RESEARCH_COST_MULTIPLIER: 0.05,
+                Attributes.DIVINE_INSPIRATION_RATE: 5,
+                Attributes.DIVINE_INSPIRATION_COST: 0.2,
+                Attributes.AWAKE_REVELATION_RATE: 50,
+                Attributes.AWAKE_REVELATION_COST: 0.1,
+                Attributes.ASLEEP_REVELATION_RATE: 20,
+                Attributes.ASLEEP_REVELATION_COST: 0.7,
+                Attributes.DIVINE_AVATAR_RATE: 100,
+                Attributes.DIVINE_AVATAR_COST: 0.2,
+                Attributes.PRIEST_RESEARCH_BONUS: 0.13,
+                Attributes.PASSIVE_POPULATION_GROWTH_RATE: 1,
+                Attributes.INCOME_PER_FUNCTIONAL: 0,
+                Attributes.INCOME_PER_SOLDIER: 0,
+                Attributes.INCOME_PER_PRIEST: 1,
+                Attributes.BONUS_POWER_PER_FUNCTIONAL: 5,
+                Attributes.PRIEST_INCOME_BOOST_CAPACITY: 0.1,
+                Attributes.ENEMY_CONVERSION_RATE: 2,
+                Attributes.ENEMY_CONVERSION_COST: 0.2,
+                Attributes.NEUTRAL_CONVERSION_RATE: 1,
+                Attributes.NEUTRAL_CONVERSION_COST: 0.05,
+                Attributes.ENEMY_PRIEST_CONVERSION_RATE: 5,
+                Attributes.ENEMY_PRIEST_CONVERSION_COST: 0.5,
+                Attributes.PANTHEON_BONUS_MULTIPLIER: 200,
+                Attributes.MAXIMUM_PRIEST_CHANNELING: 10,
+                Attributes.PRIEST_COST: 0,
+                Attributes.SOLDIER_COST: 0,
+                Attributes.SOLDIER_DISBAND_COST: 0,
+                Attributes.PRIESTS: 0,
+                Attributes.SOLDIERS: 1000,
+                Attributes.FUNCTIONARIES: 0,
+                Attributes.POWER: 0,
+                Attributes.TOTAL_CONVERTED: 0,
+                Attributes.TOTAL_POACHED: 0,
+                Attributes.TOTAL_DESTROYED: 0,
+                Attributes.TOTAL_LOST: 0,
+                Attributes.TOTAL_MASSACRED: 0,
+                Attributes.TOTAL_POPULATION_LOST: 0,
+                Attributes.TOTAL_SPENT: 0
+            }
+            for attribute_id, value in defaults.items:
+                cursor.execute("INSERT INTO player_attributes (player_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
+                            (player_id, attribute_id, value, -1))
         return True
     else:
         return False
@@ -138,18 +137,18 @@ def user_is_admin(discord_id):
 
 
 def get_discord_id_by_name(name):
-    connect()
-    cursor.execute("SELECT discord_id FROM players WHERE LOWER(name) = ?", (name.lower(),))
-    player_id = cursor.fetchone()[0]
-    disconnect()
+    player_id = None
+    with transaction() as cursor:
+        cursor.execute("SELECT discord_id FROM players WHERE LOWER(name) = ?", (name.casefold(),))
+        player_id = cursor.fetchone()[0]
     return player_id
 
 
 def get_player_id(discord_id):
-    connect()
-    cursor.execute("SELECT id FROM players WHERE discord_id = ?", (discord_id,))
-    player_id = cursor.fetchone()[0]
-    disconnect()
+    player_id = None
+    with transaction() as cursor:
+        cursor.execute("SELECT id FROM players WHERE discord_id = ?", (discord_id,))
+        player_id = cursor.fetchone()[0]
     return player_id
 
 
@@ -158,16 +157,16 @@ def get_research_cost_multiplier(player_id):
 
 
 def get_discord_ids():
-    connect()
-    names = [name[0] for name in cursor.execute("SELECT discord_id FROM players")]
-    disconnect()
+    names = []
+    with transaction() as cursor:
+        names = [name[0] for name in cursor.execute("SELECT discord_id FROM players")]
     return names
 
 
 def get_player_names():
-    connect()
-    names = [name[0] for name in cursor.execute("SELECT name FROM players")]
-    disconnect()
+    names = []
+    with transaction() as cursor:
+        names = [name[0] for name in cursor.execute("SELECT name FROM players")]
     return names
 
 
@@ -182,11 +181,10 @@ def get_power(player_id):
 def spend_power(player_id, power):
     player_power = get_power(player_id)
     if power <= player_power:
-        connect()
-        cursor.execute(
-            "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
-            (player_id, 35, -power, -1, -1))
-        disconnect()
+        with transaction() as cursor:
+            cursor.execute(
+                "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
+                (player_id, 35, -power, -1, -1))
         return True
     else:
         return False
@@ -196,21 +194,21 @@ def spend_power(player_id, power):
 # Attributes
 # ----------------------------------------
 def get_attribute_id(name):
-    connect()
-    cursor.execute("SELECT id FROM attributes WHERE LOWER(name) = ?", (name.lower(),))
-    attribute_id = cursor.fetchone()[0]
-    disconnect()
+    attribute_id = None
+    with transaction() as cursor:
+        cursor.execute("SELECT id FROM attributes WHERE LOWER(name) = ?", (name.lower(),))
+        attribute_id = cursor.fetchone()[0]
     return attribute_id
 
 
 def get_attribute(player_id, attribute_id):
-    connect()
-    cursor.execute(
-        "SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
-        "expiry_turn>?) AND start_turn<=?",
-        (player_id, attribute_id, current_turn(), current_turn()))
-    value = cursor.fetchone()[0]
-    disconnect()
+    value = None
+    with transaction() as cursor:
+        cursor.execute(
+            "SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
+            "expiry_turn>?) AND start_turn<=?",
+            (player_id, attribute_id, current_turn(), current_turn()))
+        value = cursor.fetchone()[0]
     return value
 
 
@@ -222,84 +220,83 @@ def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
     if bonuses is None:
         bonuses = []
     if name not in list(map(lambda a: a.lower(), get_tech_names())):
-        connect()
-        cursor.execute("INSERT INTO tech (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
-                       (name, description, cost, chance_multiplier))
-        cursor.execute("SELECT id FROM tech WHERE name = ?", (name,))
-        tech_id = cursor.fetchone()[0]
-        for bonus in bonuses:
-            cursor.execute("INSERT INTO tech_bonuses (tech_id,attribute_id,value) VALUES (?,?,?)",
-                           (tech_id, bonus[0], bonus[1]))
-        disconnect()
+        with transaction() as cursor:
+            cursor.execute("INSERT INTO tech (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
+                        (name, description, cost, chance_multiplier))
+            cursor.execute("SELECT id FROM tech WHERE name = ?", (name,))
+            tech_id = cursor.fetchone()[0]
+            for bonus in bonuses:
+                cursor.execute("INSERT INTO tech_bonuses (tech_id,attribute_id,value) VALUES (?,?,?)",
+                            (tech_id, bonus[0], bonus[1]))
         return True
     else:
         return False
 
 
 def add_tech_bonus(tech_id, attribute_id, value):
-    connect()
-    cursor.execute("SELECT value FROM tech_bonuses WHERE tech_id = ? AND attribute_id = ?", (tech_id, attribute_id))
-    possible_value = cursor.fetchone()
-    disconnect()
+    possible_value = None
+    with transaction() as cursor:
+        cursor.execute("SELECT value FROM tech_bonuses WHERE tech_id = ? AND attribute_id = ?", (tech_id, attribute_id))
+        possible_value = cursor.fetchone()
+    
     if possible_value:
         return False, "already has bonus"
     else:
-        connect()
-        cursor.execute("INSERT INTO tech_bonuses (tech_id, attribute_id, value) values (?,?,?)",
-                       (tech_id, attribute_id, value))
-        disconnect()
+        with transaction() as cursor:
+            cursor.execute("INSERT INTO tech_bonuses (tech_id, attribute_id, value) values (?,?,?)",
+                            (tech_id, attribute_id, value))
     return True
 
 
 def update_tech_bonus(tech_id, attribute_id, value):
-    connect()
-    cursor.execute("SELECT value FROM tech_bonuses WHERE tech_id = ? AND attribute_id = ?", (tech_id, attribute_id))
-    possible_value = cursor.fetchone()
-    disconnect()
+    possible_value = None
+    with transaction() as cursor:
+        cursor.execute("SELECT value FROM tech_bonuses WHERE tech_id = ? AND attribute_id = ?", (tech_id, attribute_id))
+        possible_value = cursor.fetchone()
     if possible_value:
-        connect()
-        cursor.execute("UPDATE tech_bonuses SET value = ? WHERE attribute_id = ? AND tech_id = ?",
-                       (value, attribute_id, tech_id))
+        with transaction() as cursor:
+            cursor.execute("UPDATE tech_bonuses SET value = ? WHERE attribute_id = ? AND tech_id = ?",
+                        (value, attribute_id, tech_id))
     else:
-        return False, "no existing bonus"
+        return False, "no existing bonus" # TODO Only return value
 
 
 def get_tech_id(name):
-    connect()
-    cursor.execute("SELECT id from tech WHERE LOWER(id) = ?", (name.lower(),))
-    tech_id = cursor.fetchone()[0]
-    disconnect()
+    tech_id = None
+    with transaction() as cursor:
+        cursor.execute("SELECT id from tech WHERE LOWER(id) = ?", (name.lower(),))
+        tech_id = cursor.fetchone()[0]
     return tech_id
 
 
 def get_tech_cost(tech_id):
-    connect()
-    cursor.execute("SELECT cost from tech WHERE id = ?", (tech_id,))
-    cost = cursor.fetchone()[0]
-    disconnect()
+    cost = None
+    with transaction() as cursor:
+        cursor.execute("SELECT cost from tech WHERE id = ?", (tech_id,))
+        cost = cursor.fetchone()[0]
     return cost
 
 
 def get_tech_names():
-    connect()
-    names = [name[0] for name in cursor.execute("SELECT name FROM tech")]
-    disconnect()
+    names = []
+    with transaction() as cursor:
+        names = [name[0] for name in cursor.execute("SELECT name FROM tech")]
     return names
 
 
 def get_tech_chance_multiplier(tech_id):
-    connect()
-    cursor.execute("SELECT chance_multiplier from tech WHERE id = ?", (tech_id,))
-    multiplier = cursor.fetchone()[0]
-    disconnect()
+    multiplier = None
+    with transaction() as cursor:
+        cursor.execute("SELECT chance_multiplier from tech WHERE id = ?", (tech_id,))
+        multiplier = cursor.fetchone()[0]
     return multiplier
 
 
 def get_player_tech(player_id):
-    connect()
-    cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
-    tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
-    disconnect()
+    tech = []
+    with transaction() as cursor:
+        cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
+        tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
     return tech
 
 
@@ -345,34 +342,36 @@ def calculate_tech_cost(player_id, tech_id):
 
 
 def complete_research(player_id, tech_id):
-    connect()
-    cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
-    tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
-    if tech_id not in tech:
-        tech.append(tech_id)
-        cursor.execute("UPDATE players SET tech = ? WHERE id = ?", (json.dumps(tech), player_id))
-        cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
-        bonuses = []
-        for temp_bonus in list(cursor.fetchall()):
-            bonuses.append(list(temp_bonus))
+    with transaction() as cursor:
+        cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
+        tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
+        if tech_id not in tech:
+            tech.append(tech_id)
+            cursor.execute("UPDATE players SET tech = ? WHERE id = ?", (json.dumps(tech), player_id))
+            cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
+            bonuses = []
+            for temp_bonus in list(cursor.fetchall()):
+                bonuses.append(list(temp_bonus))
 
-        for bonus_pair in bonuses:
-            cursor.execute(
-                "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values ("
-                "?,?,?,?,?)",
-                (player_id, bonus_pair[0], bonus_pair[1], -1, -1))
-        disconnect()
-        return True
-    else:
-        return False
+            for bonus_pair in bonuses:
+                cursor.execute(
+                    "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values ("
+                    "?,?,?,?,?)",
+                    (player_id, bonus_pair[0], bonus_pair[1], -1, -1))
+            return True
+        else:
+            return False
 
 
 # ----------------------------------------
 # Turns
 # ----------------------------------------
 def current_turn():
-    connect()
-    cursor.execute("select value from system_variables where name = ?", ("turn",))
+    turn = None
+    with transaction() as cursor:
+        cursor.execute("select value from system_variables where name = ?", ("turn",))
+        turn = cursor.fetchone()[0]
+    return turn
 
 
 def new_turn():
@@ -405,26 +404,26 @@ def attempt_conversion(player_id, other_player_id, quantity, person_type):
         if attempt_cost * quantity <= get_power(player_id):
             spend_power(player_id, attempt_cost * quantity)
             converts = calculate_conversion_success(quantity, conversion_rate)
-            connect()
-            if person_type == "enemy_priest":
-                cursor.execute(
-                    "INSERT INTO player_attributes (player_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
-                    "?,?,?,?,?)",
-                    (other_player_id, Attributes.PRIESTS, -1 * converts, -1, -1))
-            elif person_type == "enemy":
-                cursor.execute(
-                    "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                    "?,?,?,?,?)",
-                    (other_player_id, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
-                cursor.execute(
-                    "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                    "?,?,?,?,?)",
-                    (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
-            elif person_type == "neutral":
-                cursor.execute(
-                    "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                    "?,?,?,?,?)",
-                    (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
+            with transaction() as cursor:
+                if person_type == "enemy_priest":
+                    cursor.execute(
+                        "INSERT INTO player_attributes (player_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
+                        "?,?,?,?,?)",
+                        (other_player_id, Attributes.PRIESTS, -1 * converts, -1, -1))
+                elif person_type == "enemy":
+                    cursor.execute(
+                        "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                        "?,?,?,?,?)",
+                        (other_player_id, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
+                    cursor.execute(
+                        "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                        "?,?,?,?,?)",
+                        (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
+                elif person_type == "neutral":
+                    cursor.execute(
+                        "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                        "?,?,?,?,?)",
+                        (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
     else:
         return False, "Same pantheon"
 
