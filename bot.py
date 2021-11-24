@@ -25,7 +25,7 @@ async def research(ctx, *, tech_name):
     await ctx.send('You have not joined this game yet.')
     return
   else:
-    # Phase 1: output text
+    # Phase 1: Send message
     success_cost = db.calculate_tech_cost(player_id, tech_id)
     multiplier = db.get_research_cost_multiplier(player_id)
     attempt_costs = tuple(map(lambda x: db.get_attribute(player_id, x) * multiplier, (
@@ -46,6 +46,8 @@ async def research(ctx, *, tech_name):
             success_cost=success_cost, attempt_costs=attempt_costs
             )
     message = await ctx.send(output_text)
+
+    # Phase 2: Add reactions
     reactions = {
       '\N{REGIONAL INDICATOR SYMBOL LETTER A}': 'divine_inspiration',
       '\N{REGIONAL INDICATOR SYMBOL LETTER B}': 'awake_revelation',
@@ -55,6 +57,8 @@ async def research(ctx, *, tech_name):
     for reaction in reactions.keys():
       await message.add_reaction(reaction)
 
+
+    # Phase 3: Wait for player to react
     def check(reaction, user):
       if str(reaction.emoji) not in reactions:
         return False
@@ -66,6 +70,8 @@ async def research(ctx, *, tech_name):
     
     try:
       user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
+
+      # Phase 4: Complete the research
       emoji = str(user_reaction.emoji)
 
       # wait for reaction from correct player
