@@ -4,14 +4,17 @@ import SecretManager
 
 # import main as server
 
+research_cache = {}
+
 bot = commands.Bot(command_prefix="?")
 
 @bot.command()
-async def research(ctx, tech_id):
+async def research(ctx, tech_name):
+  # ctx.author.id
   pass
 
 @bot.command()
-async def attack(ctx, player_name, soldier_count):
+async def battle(ctx, player_name, soldier_count):
   pass
 
 @bot.command()
