@@ -1,0 +1,7 @@
+__pycache__
+clienttoken
+.vscode
+venv
+.idea
+*.db
+secrets.yaml
