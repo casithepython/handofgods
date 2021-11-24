@@ -2,9 +2,11 @@ import json
 import random
 import sqlite3
 
-from flask import Flask, make_response, request, jsonify
+import bonus as bonus
+from flask import Flask
 
 app = Flask(__name__)
+
 
 class Attributes:
     ATTACK = 1
@@ -52,6 +54,10 @@ class Attributes:
     TOTAL_SPENT = 42
     TOTAL_INCOME = 43
 
+# TODO: Pantheons
+# TODO: conversion
+
+
 def connect():
     global connection
     global cursor
@@ -64,8 +70,6 @@ def disconnect():
     connection.commit()
     connection.close()
 
-
-# TODO: admin users
 
 # ----------------------------------------
 # User management
@@ -129,8 +133,10 @@ def new_user(name, discord_id):
     else:
         return False
 
+
 def user_is_admin(discord_id):
-    return discord_id in [262098148283908099,466015764919353346]
+    return discord_id in [262098148283908099, 466015764919353346]
+
 
 def get_discord_id_by_name(name):
     connect()
@@ -138,6 +144,7 @@ def get_discord_id_by_name(name):
     player_id = cursor.fetchone()[0]
     disconnect()
     return player_id
+
 
 def get_player_id(discord_id):
     connect()
@@ -157,11 +164,13 @@ def get_discord_ids():
     disconnect()
     return names
 
+
 def get_player_names():
     connect()
     names = [name[0] for name in cursor.execute("SELECT name FROM players")]
     disconnect()
     return names
+
 
 # ----------------------------------------
 # Power
@@ -255,12 +264,14 @@ def update_tech_bonus(tech_id, attribute_id, value):
     else:
         return False, "no existing bonus"
 
+
 def get_tech_id(name):
     connect()
     cursor.execute("SELECT id from tech WHERE LOWER(id) = ?", (name.lower(),))
     tech_id = cursor.fetchone()[0]
     disconnect()
     return tech_id
+
 
 def get_tech_cost(tech_id):
     connect()
@@ -340,8 +351,20 @@ def complete_research(player_id, tech_id):
     tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
     if tech_id not in tech:
         tech.append(tech_id)
-    cursor.execute("UPDATE players SET tech = ? WHERE id = ?", (json.dumps(tech), player_id))
-    disconnect()
+        cursor.execute("UPDATE players SET tech = ? WHERE id = ?", (json.dumps(tech), player_id))
+        cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
+        bonuses = []
+        for temp_bonus in list(cursor.fetchall()):
+            bonuses.append(list(temp_bonus))
+
+        for bonus_pair in bonuses:
+            cursor.execute(
+                "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values (?,?,?,?,?)",
+                (player_id, bonus_pair[0], bonus_pair[1], -1, -1))
+        disconnect()
+        return True
+    else:
+        return False
 
 
 # Turns
@@ -351,6 +374,6 @@ def current_turn():
 
 
 # new_user("casi", 466015764919353346)
-print(add_tech_bonus(1, 1, 1))
+complete_research(1, 1)
 '''if __name__ == '__main__':
     app.run()'''
