@@ -51,10 +51,27 @@ attributes = [
     "maximum_priest_channeling",
     "priest_cost",
     "soldier_cost",
-    "soldier_disband_cost"
+    "soldier_disband_cost",
+
+    # Base assets
+    "priests",
+    "soldiers",
+    "functionaries",
+    "power",
+
+    # Fun post-game stats to look at and brag about
+    "total_converted",
+    "total_poached",
+    "total_destroyed",
+    "total_lost",
+    "total_massacred",
+    "total_population_lost",
+    "total_spent",
+    "total_income"
 ]
 for attribute in attributes:
     cursor.execute('INSERT INTO attributes (name) VALUES (?)', (attribute,))
 
+cursor.execute("INSERT INTO system_variables (name,value) values (?,?)", ("turn", 1))
 connection.commit()
 connection.close()
