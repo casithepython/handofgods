@@ -28,6 +28,8 @@ class Attributes:
     INCOME_PER_SOLDIER = 17
     INCOME_PER_PRIEST = 18
     BONUS_POWER_PER_FUNCTIONAL = 19
+    BONUS_POWER_PER_SOLDIER = 44
+    BONUS_POWER_PER_PRIEST = 45
     PRIEST_INCOME_BOOST_CAPACITY = 20
     ENEMY_CONVERSION_RATE = 21
     ENEMY_CONVERSION_COST = 22
@@ -53,17 +55,21 @@ class Attributes:
     TOTAL_SPENT = 42
     TOTAL_INCOME = 43
 
+
 class transaction:
     def __init__(self):
         pass
+
     def __enter__(self):
         self.__connection = sqlite3.connect("HandOfGods.db")
         self.__connection.row_factory = sqlite3.Row
         self.cursor = self.__connection.cursor()
         return self.cursor
+
     def __exit__(self, exc_type, exc_value):
         self.__connection.commit()
         self.__connection.close()
+
 
 # TODO: Pantheons
 # TODO: battle
@@ -76,7 +82,8 @@ class transaction:
 def new_user(name, discord_id):
     if discord_id not in get_discord_ids() and name not in list(map(lambda a: a.lower(), get_player_names())):
         with transaction() as cursor:
-            cursor.execute('INSERT INTO players (name,discord_id,tech) VALUES (?,?,?)', (name, discord_id, json.dumps([])))
+            cursor.execute('INSERT INTO players (name,discord_id,tech) VALUES (?,?,?)',
+                           (name, discord_id, json.dumps([])))
             cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
             player_id = cursor.fetchone()[0]
             defaults = {
@@ -100,6 +107,8 @@ def new_user(name, discord_id):
                 Attributes.INCOME_PER_SOLDIER: 0,
                 Attributes.INCOME_PER_PRIEST: 1,
                 Attributes.BONUS_POWER_PER_FUNCTIONAL: 5,
+                Attributes.BONUS_POWER_PER_SOLDIER: 0,
+                Attributes.BONUS_POWER_PER_PRIEST: 0,
                 Attributes.PRIEST_INCOME_BOOST_CAPACITY: 0.1,
                 Attributes.ENEMY_CONVERSION_RATE: 2,
                 Attributes.ENEMY_CONVERSION_COST: 0.2,
@@ -122,11 +131,13 @@ def new_user(name, discord_id):
                 Attributes.TOTAL_LOST: 0,
                 Attributes.TOTAL_MASSACRED: 0,
                 Attributes.TOTAL_POPULATION_LOST: 0,
-                Attributes.TOTAL_SPENT: 0
+                Attributes.TOTAL_SPENT: 0,
+                Attributes.TOTAL_INCOME: 0,
             }
             for attribute_id, value in defaults.items:
-                cursor.execute("INSERT INTO player_attributes (player_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
-                            (player_id, attribute_id, value, -1))
+                cursor.execute(
+                    "INSERT INTO player_attributes (player_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
+                    (player_id, attribute_id, value, -1))
         return True
     else:
         return False
@@ -157,14 +168,14 @@ def get_research_cost_multiplier(player_id):
 
 
 def get_discord_ids():
-    names = []
+    discord_ids = []
     with transaction() as cursor:
-        names = [name[0] for name in cursor.execute("SELECT discord_id FROM players")]
-    return names
+        discord_ids = [discord_id[0] for discord_id in cursor.execute("SELECT discord_id FROM players")]
+    return discord_ids
 
 
 def get_player_names():
-    names = []
+    discord_ids = []
     with transaction() as cursor:
         names = [name[0] for name in cursor.execute("SELECT name FROM players")]
     return names
@@ -222,12 +233,12 @@ def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
     if name not in list(map(lambda a: a.lower(), get_tech_names())):
         with transaction() as cursor:
             cursor.execute("INSERT INTO tech (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
-                        (name, description, cost, chance_multiplier))
+                           (name, description, cost, chance_multiplier))
             cursor.execute("SELECT id FROM tech WHERE name = ?", (name,))
             tech_id = cursor.fetchone()[0]
             for bonus in bonuses:
                 cursor.execute("INSERT INTO tech_bonuses (tech_id,attribute_id,value) VALUES (?,?,?)",
-                            (tech_id, bonus[0], bonus[1]))
+                               (tech_id, bonus[0], bonus[1]))
         return True
     else:
         return False
@@ -238,13 +249,13 @@ def add_tech_bonus(tech_id, attribute_id, value):
     with transaction() as cursor:
         cursor.execute("SELECT value FROM tech_bonuses WHERE tech_id = ? AND attribute_id = ?", (tech_id, attribute_id))
         possible_value = cursor.fetchone()
-    
+
     if possible_value:
         return False, "already has bonus"
     else:
         with transaction() as cursor:
             cursor.execute("INSERT INTO tech_bonuses (tech_id, attribute_id, value) values (?,?,?)",
-                            (tech_id, attribute_id, value))
+                           (tech_id, attribute_id, value))
     return True
 
 
@@ -256,9 +267,9 @@ def update_tech_bonus(tech_id, attribute_id, value):
     if possible_value:
         with transaction() as cursor:
             cursor.execute("UPDATE tech_bonuses SET value = ? WHERE attribute_id = ? AND tech_id = ?",
-                        (value, attribute_id, tech_id))
+                           (value, attribute_id, tech_id))
     else:
-        return False, "no existing bonus" # TODO Only return value
+        return False, "no existing bonus"  # TODO Only return value
 
 
 def get_tech_id(name):
