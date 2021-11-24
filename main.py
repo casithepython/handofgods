@@ -84,6 +84,9 @@ def new_user(name, discord_id):
     else:
         return False
 
+def player_is_admin(player_id):
+    pass
+
 def get_player_id(discord_id):
     connect()
     cursor.execute("SELECT id FROM players WHERE discord_id = ?", (discord_id,))
@@ -195,6 +198,12 @@ def update_tech_bonus(tech_id, attribute_id, value):
     else:
         return False, "no existing bonus"
 
+def get_tech_id(name):
+    connect()
+    cursor.execute("SELECT id from tech WHERE id = ?", (name,))
+    tech_id = cursor.fetchone()[0]
+    disconnect()
+    return tech_id
 
 def get_tech_cost(tech_id):
     connect()
