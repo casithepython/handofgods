@@ -20,18 +20,22 @@ def disconnect():
     connection.close()
 
 
+# ----------------------------------------
 # User management
+# ----------------------------------------
 @app.route("/create_user", methods=["POST"])
 def create_user():  # put application's code here
     req = request.get_json()
     name = req.get('name')
-    return make_response(new_user(name), 200)
+    player_id = req.get('id')
+
+    return make_response(new_user(name, player_id), 200)
 
 
-def new_user(name):
-    if name not in get_names():
+def new_user(name, discord_id):
+    if discord_id not in get_discord_ids():
         connect()
-        cursor.execute("INSERT INTO players (name,tech) VALUES (?,?)", (name, json.dumps([])))
+        cursor.execute('INSERT INTO players (name,discord_id,tech) VALUES (?,?,?)', (name, discord_id, json.dumps([])))
         cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
         player_id = cursor.fetchone()[0]
         defaults = [
@@ -65,7 +69,19 @@ def new_user(name):
             [28, 200],
             [29, 10],
             [30, 0],
-            [31, 0]
+            [31, 0],
+            [32, 0],
+            [33, 0],
+            [34, 1000],
+            [35, 0],
+            [36, 0],
+            [37, 0],
+            [38, 0],
+            [39, 0],
+            [40, 0],
+            [41, 0],
+            [42, 0],
+            [43, 0]
         ]
         for default in defaults:
             cursor.execute("INSERT INTO player_attributes (player_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
@@ -75,55 +91,60 @@ def new_user(name):
     else:
         return False
 
-def get_power(player_id):
+
+@app.route("/get_player_id", methods=["GET"])
+def get_player_id():
+    return make_response(get_id(request.args.get("id")), 200)
+
+
+def get_id(discord_id):
     connect()
-    cursor.execute("SELECT power FROM players WHERE id = ?",(player_id,))
-    power = int(cursor.fetchone()[0])
+    cursor.execute("SELECT id FROM players WHERE discord_id = ?", (discord_id,))
+    player_id = cursor.fetchone()[0]
     disconnect()
-    return power
+    return player_id
+
+
+def get_research_cost_multiplier(player_id):
+    return get_attribute(player_id, 5)
+
+
+@app.route("/get_players", methods=["GET"])
+def get_players():
+    return make_response(jsonify(get_discord_ids()), 200)
+
+
+def get_discord_ids():
+    connect()
+    names = [name[0] for name in cursor.execute("SELECT discord_id FROM players")]
+    disconnect()
+    return names
+
+
+# ----------------------------------------
+# Power
+# ----------------------------------------
+
+def get_power(player_id):
+    return get_attribute(player_id, 35)
+
 
 def spend_power(player_id, power):
     player_power = get_power(player_id)
-    if power<=player_power:
+    if power <= player_power:
         connect()
-        cursor.execute("UPDATE players SET power = ? WHERE id = ?", (player_power-power,player_id))
+        cursor.execute(
+            "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
+            (player_id, 35, -power, -1, -1))
         disconnect()
         return True
     else:
         return False
 
-@app.route("/get_users", methods=["GET"])
-def get_users():
-    return make_response(jsonify(get_names()), 200)
 
-
-def get_names():
-    connect()
-    names = [name[0] for name in cursor.execute("SELECT name FROM players")]
-    disconnect()
-    return names
-
-def get_tech(player_id):
-    connect()
-    cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
-    tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
-    disconnect()
-    return tech
-
-@app.route("/get_player_id", methods=["GET"])
-def get_player_id():
-    return make_response(get_id(request.args.get("name")), 200)
-
-
-def get_id(name):
-    connect()
-    cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
-    id = cursor.fetchone()[0]
-    disconnect()
-    return id
-
-
-# Tech
+# ----------------------------------------
+# Attributes
+# ----------------------------------------
 @app.route("/get_stat_id", methods=["GET"])
 def get_stat_id():
     return make_response(get_attribute_id(request.args.get("name")), 200)
@@ -132,18 +153,76 @@ def get_stat_id():
 def get_attribute_id(name):
     connect()
     cursor.execute("SELECT id FROM attributes WHERE name = ?", (name,))
-    id = cursor.fetchone()[0]
+    attribute_id = cursor.fetchone()[0]
     disconnect()
-    return id
+    return attribute_id
+
 
 def get_attribute(player_id, attribute_id):
     connect()
-    cursor.execute("SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR expiry_turn>?)", (player_id, attribute_id, current_turn()))
+    cursor.execute(
+        "SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
+        "expiry_turn>?) AND start_turn<=?",
+        (player_id, attribute_id, current_turn(),current_turn()))
     value = cursor.fetchone()[0]
     disconnect()
     return value
 
+
+# ----------------------------------------
+# Tech
+# ----------------------------------------
+def new_tech(name, description, cost, bonuses, chance_multiplier=1):
+    # bonuses should be formatted as [[tech_1_id,value1],[tech_2_id,value2]]
+    if name not in get_tech_names():
+        connect()
+        cursor.execute("INSERT INTO tech (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
+                       (name, description, cost, chance_multiplier))
+        cursor.execute("SELECT id FROM tech WHERE name = ?", (name,))
+        tech_id = cursor.fetchone()[0]
+        for bonus in bonuses:
+            cursor.execute("INSERT INTO tech_bonuses (tech_id,attribute_id,value) VALUES (?,?,?)",
+                           (tech_id, bonus[0], bonus[1]))
+        disconnect()
+        return True
+    else:
+        return False
+
+
+def get_tech_cost(tech_id):
+    connect()
+    cursor.execute("SELECT cost from tech WHERE id = ?", (tech_id,))
+    cost = cursor.fetchone()[0]
+    disconnect()
+    return cost
+
+
+def get_tech_names():
+    connect()
+    names = [name[0] for name in cursor.execute("SELECT name FROM tech")]
+    disconnect()
+    return names
+
+
+def get_tech_chance_multiplier(tech_id):
+    connect()
+    cursor.execute("SELECT chance_multiplier from tech WHERE id = ?", (tech_id,))
+    multiplier = cursor.fetchone()[0]
+    disconnect()
+    return multiplier
+
+
+def get_player_tech(player_id):
+    connect()
+    cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
+    tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
+    disconnect()
+    return tech
+
+
+# ----------------------------------------
 # Research
+# ----------------------------------------
 @app.route("/research", methods=["POST"])
 def research():
     req = request.get_json()
@@ -155,15 +234,18 @@ def research():
     else:
         return make_response("Research failed.", 200)
 
-def calculate_cost(player_id, tech_id, method_cost):
-    # TODO: BUILD THIS
-    return method_cost
+
+def calculate_cost(player_id, tech_id):
+    base_cost = get_tech_cost(tech_id)
+    player_cost_multiplier = get_research_cost_multiplier(player_id)
+    return base_cost * player_cost_multiplier
+
 
 def attempt_research(player_id, tech_id, method):
-    if tech_id not in get_tech(player_id):
+    if tech_id not in get_player_tech(player_id):
         if method == "divine_inspiration":
-            attribute_rate = get_attribute(player_id,6)
-            attribute_cost = get_attribute(player_id,7)
+            attribute_rate = get_attribute(player_id, 6)
+            attribute_cost = get_attribute(player_id, 7)
         elif method == "awake_revelation":
             attribute_rate = get_attribute(player_id, 8)
             attribute_cost = get_attribute(player_id, 9)
@@ -176,10 +258,12 @@ def attempt_research(player_id, tech_id, method):
         else:
             return False, "Invalid method"
 
-        cost = calculate_cost(player_id, tech_id, attribute_cost)
-        if spend_power(player_id,cost):
+        cost = calculate_cost(player_id, tech_id)
+        attempt_cost = attribute_cost * get_research_cost_multiplier(player_id)
+        if spend_power(player_id, attempt_cost) and get_power(player_id) > cost:
             if random.random() <= attribute_rate:
                 complete_research(player_id, tech_id)
+                spend_power(player_id, cost)
                 return True
             else:
                 return False, "failed chance"
@@ -193,16 +277,19 @@ def complete_research(player_id, tech_id):
     connect()
     cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
     tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
-    if tech_id not in tech: tech.append(tech_id)
+    if tech_id not in tech:
+        tech.append(tech_id)
     cursor.execute("UPDATE players SET tech = ? WHERE id = ?", (json.dumps(tech), player_id))
     disconnect()
 
+
 # Turns
 def current_turn():
-    return 1
+    connect()
+    cursor.execute("select value from system_variables where name = ?",("turn,"))
 
-print(attempt_research(1,2,"divine_inspiration"))
 
+new_user("casi", 466015764919353346)
 
 '''if __name__ == '__main__':
     app.run()'''
