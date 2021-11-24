@@ -2,7 +2,6 @@ import json
 import random
 import sqlite3
 
-import bonus as bonus
 from flask import Flask
 
 app = Flask(__name__)
@@ -54,10 +53,10 @@ class Attributes:
     TOTAL_SPENT = 42
     TOTAL_INCOME = 43
 
+
 # TODO: Pantheons
-# TODO: conversion
-
-
+# TODO: battle
+# TODO: new turn function
 def connect():
     global connection
     global cursor
@@ -359,7 +358,8 @@ def complete_research(player_id, tech_id):
 
         for bonus_pair in bonuses:
             cursor.execute(
-                "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values (?,?,?,?,?)",
+                "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values ("
+                "?,?,?,?,?)",
                 (player_id, bonus_pair[0], bonus_pair[1], -1, -1))
         disconnect()
         return True
@@ -367,10 +367,81 @@ def complete_research(player_id, tech_id):
         return False
 
 
+# ----------------------------------------
 # Turns
+# ----------------------------------------
 def current_turn():
     connect()
     cursor.execute("select value from system_variables where name = ?", ("turn",))
+
+
+def new_turn():
+    pass
+
+
+# ----------------------------------------
+# Conversion
+# ----------------------------------------
+def attempt_conversion(player_id, other_player_id, quantity, person_type):
+    if get_pantheon(player_id) is None or get_pantheon(other_player_id) is None or get_pantheon(
+            player_id) is not get_pantheon(other_player_id):
+        if person_type == "enemy":
+            if quantity <= get_attribute(other_player_id, Attributes.FUNCTIONARIES):
+                conversion_rate = get_attribute(player_id, Attributes.ENEMY_CONVERSION_RATE)
+                attempt_cost = get_attribute(player_id, Attributes.ENEMY_CONVERSION_COST)
+            else:
+                return False, "Insufficient functionaries"
+        elif person_type == "enemy_priest":
+            if quantity <= get_attribute(other_player_id, Attributes.PRIESTS):
+                conversion_rate = get_attribute(player_id, Attributes.ENEMY_PRIEST_CONVERSION_RATE)
+                attempt_cost = get_attribute(player_id, Attributes.ENEMY_PRIEST_CONVERSION_COST)
+            else:
+                return False, "Insufficient priests"
+        elif person_type == "neutral":
+            conversion_rate = get_attribute(player_id, Attributes.NEUTRAL_CONVERSION_RATE)
+            attempt_cost = get_attribute(player_id, Attributes.NEUTRAL_CONVERSION_COST)
+        else:
+            return False, "Invalid type"
+        if attempt_cost * quantity <= get_power(player_id):
+            spend_power(player_id, attempt_cost * quantity)
+            converts = calculate_conversion_success(quantity, conversion_rate)
+            connect()
+            if person_type == "enemy_priest":
+                cursor.execute(
+                    "INSERT INTO player_attributes (player_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
+                    "?,?,?,?,?)",
+                    (other_player_id, Attributes.PRIESTS, -1 * converts, -1, -1))
+            elif person_type == "enemy":
+                cursor.execute(
+                    "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                    "?,?,?,?,?)",
+                    (other_player_id, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
+                cursor.execute(
+                    "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                    "?,?,?,?,?)",
+                    (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
+            elif person_type == "neutral":
+                cursor.execute(
+                    "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                    "?,?,?,?,?)",
+                    (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
+    else:
+        return False, "Same pantheon"
+
+
+def calculate_conversion_success(quantity, chance):
+    count = 0
+    for i in range(quantity):
+        if random.random() <= chance:
+            count += 1
+    return count
+
+
+# ----------------------------------------
+# Pantheons
+# ----------------------------------------
+def get_pantheon(player_id):
+    return 1
 
 
 # new_user("casi", 466015764919353346)
