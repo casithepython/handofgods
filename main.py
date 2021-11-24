@@ -71,7 +71,7 @@ def disconnect():
 # User management
 # ----------------------------------------
 def new_user(name, discord_id):
-    if discord_id not in get_discord_ids():
+    if discord_id not in get_discord_ids() and name not in list(map(lambda a: a.lower(), get_player_names())):
         connect()
         cursor.execute('INSERT INTO players (name,discord_id,tech) VALUES (?,?,?)', (name, discord_id, json.dumps([])))
         cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
@@ -129,8 +129,8 @@ def new_user(name, discord_id):
     else:
         return False
 
-def player_is_admin(player_id):
-    pass
+def user_is_admin(discord_id):
+    return discord_id in [262098148283908099,466015764919353346]
 
 def get_player_id(discord_id):
     connect()
@@ -150,13 +150,18 @@ def get_discord_ids():
     disconnect()
     return names
 
+def get_player_names():
+    connect()
+    names = [name[0] for name in cursor.execute("SELECT name FROM players")]
+    disconnect()
+    return names
 
 # ----------------------------------------
 # Power
 # ----------------------------------------
 
 def get_power(player_id):
-    return get_attribute(player_id, 35)
+    return get_attribute(player_id, Attributes.POWER)
 
 
 def spend_power(player_id, power):
@@ -177,7 +182,7 @@ def spend_power(player_id, power):
 # ----------------------------------------
 def get_attribute_id(name):
     connect()
-    cursor.execute("SELECT id FROM attributes WHERE name = ?", (name,))
+    cursor.execute("SELECT id FROM attributes WHERE LOWER(name) = ?", (name.lower(),))
     attribute_id = cursor.fetchone()[0]
     disconnect()
     return attribute_id
@@ -201,7 +206,7 @@ def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
     # bonuses should be formatted as [[tech_1_id,value1],[tech_2_id,value2]]
     if bonuses is None:
         bonuses = []
-    if name not in get_tech_names():
+    if name not in list(map(lambda a: a.lower(), get_tech_names())):
         connect()
         cursor.execute("INSERT INTO tech (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
                        (name, description, cost, chance_multiplier))
@@ -245,7 +250,7 @@ def update_tech_bonus(tech_id, attribute_id, value):
 
 def get_tech_id(name):
     connect()
-    cursor.execute("SELECT id from tech WHERE id = ?", (name,))
+    cursor.execute("SELECT id from tech WHERE LOWER(id) = ?", (name.lower(),))
     tech_id = cursor.fetchone()[0]
     disconnect()
     return tech_id
@@ -301,7 +306,7 @@ def attempt_research(player_id, tech_id, method):
         else:
             return False, "Invalid method"
 
-        cost = calculate_cost(player_id, tech_id)
+        cost = calculate_tech_cost(player_id, tech_id)
         attempt_cost = attribute_cost * get_research_cost_multiplier(player_id)
         if spend_power(player_id, attempt_cost) and get_power(player_id) > cost:
             if random.random() <= attribute_rate:
@@ -316,7 +321,7 @@ def attempt_research(player_id, tech_id, method):
         return False, "already researched"
 
 
-def calculate_cost(player_id, tech_id):
+def calculate_tech_cost(player_id, tech_id):
     base_cost = get_tech_cost(tech_id)
     player_cost_multiplier = get_research_cost_multiplier(player_id)
     return base_cost * player_cost_multiplier
