@@ -329,7 +329,7 @@ def attempt_research(player_id, tech_id, method):
             if random.random() <= attribute_rate:
                 complete_research(player_id, tech_id)
                 spend_power(player_id, cost)
-                return True
+                return True, "success"
             else:
                 return False, "failed chance"
         else:
