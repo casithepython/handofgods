@@ -4,8 +4,8 @@ import SecretManager
 from asyncio import TimeoutError
 
 
-# import main as db
-import testdb as db
+import main as db
+# import testdb as db
 
 debug_mode = True
 
