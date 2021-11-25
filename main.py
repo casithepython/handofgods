@@ -581,22 +581,31 @@ def deal_attack_damage(discord_id,damage):
   available_functionaries = get_attribute(discord_id, Attributes.FUNCTIONARIES)
   available_priests = get_attribute(discord_id, Attributes.PRIESTS)
 
+  defender_armor = get_attribute(discord_id, Attributes.ARMOR)
 
-  if available_defenders >= remaining_damage:
-    kill(discord_id,remaining_damage,"soldiers")
-  else:
-    kill(discord_id,available_defenders,"soldiers")
-    remaining_damage -= available_defenders
-    if available_functionaries >= remaining_damage:
-      kill(discord_id,remaining_damage,"functionaries")
-    else:
-      kill(discord_id, available_defenders, "functionaries")
-      remaining_damage -= available_functionaries
-      if available_priests >= remaining_damage:
-        kill(discord_id, available_priests, "priests")
-      else:
-        kill(discord_id,remaining_damage,"priests")
-  return True, "Success"
+  defenders_killed = int(remaining_damage / defender_armor)
+  remaining_damage -= available_defenders * defender_armor
+  if defenders_killed > 0:
+    kill(discord_id, defenders_killed, "soldiers")
+  
+  if remaining_damage > 0:
+    functionary_armor = get_attribute(discord_id, Attributes.FUCTIONARY_ARMOR)
+    functionaries_killed = int(remaining_damage / functionary_armor)
+    remaining_damage -= available_functionaries * functionary_armor
+    if functionaries_killed > 0:
+      kill(discord_id, functionaries_killed, "functionaries")
+
+  if remaining_damage > 0:
+    priest_armor = get_attribute(discord_id, Attributes.FUCTIONARY_ARMOR)
+    priests_killed = int(remaining_damage / priest_armor)
+    remaining_damage -= available_priests * priest_armor
+    if priests_killed > 0:
+      kill(discord_id, priests_killed, "priests")
+
+  if remaining_damage > 0:
+    return False
+
+  return True
 
 
 def deal_defense_damage(discord_id,damage):
