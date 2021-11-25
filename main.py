@@ -52,6 +52,12 @@ class Attributes:
   TOTAL_POPULATION_LOST = 41
   TOTAL_SPENT = 42
   TOTAL_INCOME = 43
+  BONUS_POWER_PER_SOLDIER = 44
+  BONUS_POWER_PER_PRIEST = 45
+  ATTACK_ELIGIBLE_SOLDIERS = 46
+  ATTACKS_PER_TURN = 47
+  POPULATION_ARMOR = 48
+  POPULATION_DEFENSE = 49
 
 class connect:
   def __init__(self):
@@ -142,7 +148,13 @@ def new_user(name, discord_id):
         Attributes.TOTAL_LOST: 0,
         Attributes.TOTAL_MASSACRED: 0,
         Attributes.TOTAL_POPULATION_LOST: 0,
-        Attributes.TOTAL_SPENT: 0
+        Attributes.TOTAL_SPENT: 0,
+        Attributes.BONUS_POWER_PER_SOLDIER: 0,
+        Attributes.BONUS_POWER_PER_PRIEST: 0,
+        Attributes.ATTACKS_PER_TURN: 1,
+        Attributes.POPULATION_ARMOR: 0,
+        Attributes.POPULATION_DEFENSE: 0
+
       }
       for attribute_id, value in defaults.items:
         cursor.execute("INSERT INTO player_attributes (player_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
