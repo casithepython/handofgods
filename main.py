@@ -308,7 +308,7 @@ def get_tech_id(name):
 
 def get_tech_name(tech_id):
     name = None
-    with transaction() as cursor:
+    with connect() as cursor:
         cursor.execute("SELECT name from tech WHERE id = ?", (tech_id.lower(),))
         name = cursor.fetchone()[0]
     return name
@@ -348,14 +348,13 @@ def player_has_tech(discord_id, tech_id):
     cursor.execute("SELECT 1 FROM player_technologies WHERE player_id = ? AND technology_id = ?", (player_id, tech_id))
     return cursor.fetchone() is not None
 
-def check_prerequisites(player_id, tech_id):
+def check_prerequisites(discord_id, tech_id):
     required_prerequisites = []
-    player_tech = get_player_tech(player_id)
     for prerequisite in get_hard_prerequisites(tech_id):
-        if prerequisite not in player_tech:
-            required_prerequisites.append(prerequisite)
+      if not player_has_tech(discord_id, prerequisite):
+          required_prerequisites.append(prerequisite)
 
-    return len(required_prerequisites) is 0, required_prerequisites
+    return len(required_prerequisites) == 0, required_prerequisites
 
 
 # ----------------------------------------
