@@ -70,7 +70,12 @@ attributes = [
     "total_income",
 
     "bonus_power_per_soldier",
-    "bonus_power_per_priest"
+    "bonus_power_per_priest",
+
+    "attack_eligible_soldiers",
+    "attacks_per_turn",
+    "population_armor",
+    "population_defense"
 ]
 for attribute in attributes:
     cursor.execute('INSERT INTO attributes (name) VALUES (?)', (attribute,))

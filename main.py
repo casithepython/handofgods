@@ -1,7 +1,7 @@
 import json
 import random
 import sqlite3
-
+import math
 from flask import Flask
 
 app = Flask(__name__)
@@ -28,8 +28,6 @@ class Attributes:
     INCOME_PER_SOLDIER = 17
     INCOME_PER_PRIEST = 18
     BONUS_POWER_PER_FUNCTIONAL = 19
-    BONUS_POWER_PER_SOLDIER = 44
-    BONUS_POWER_PER_PRIEST = 45
     PRIEST_INCOME_BOOST_CAPACITY = 20
     ENEMY_CONVERSION_RATE = 21
     ENEMY_CONVERSION_COST = 22
@@ -54,7 +52,12 @@ class Attributes:
     TOTAL_POPULATION_LOST = 41
     TOTAL_SPENT = 42
     TOTAL_INCOME = 43
-
+    BONUS_POWER_PER_SOLDIER = 44
+    BONUS_POWER_PER_PRIEST = 45
+    ATTACK_ELIGIBLE_SOLDIERS = 46
+    ATTACKS_PER_TURN = 47
+    POPULATION_ARMOR = 48
+    POPULATION_DEFENSE = 49
 
 class transaction:
     def __init__(self):
@@ -107,8 +110,6 @@ def new_user(name, discord_id):
                 Attributes.INCOME_PER_SOLDIER: 0,
                 Attributes.INCOME_PER_PRIEST: 1,
                 Attributes.BONUS_POWER_PER_FUNCTIONAL: 5,
-                Attributes.BONUS_POWER_PER_SOLDIER: 0,
-                Attributes.BONUS_POWER_PER_PRIEST: 0,
                 Attributes.PRIEST_INCOME_BOOST_CAPACITY: 0.1,
                 Attributes.ENEMY_CONVERSION_RATE: 2,
                 Attributes.ENEMY_CONVERSION_COST: 0.2,
@@ -133,6 +134,11 @@ def new_user(name, discord_id):
                 Attributes.TOTAL_POPULATION_LOST: 0,
                 Attributes.TOTAL_SPENT: 0,
                 Attributes.TOTAL_INCOME: 0,
+                Attributes.BONUS_POWER_PER_SOLDIER: 0,
+                Attributes.BONUS_POWER_PER_PRIEST: 0,
+                Attributes.ATTACKS_PER_TURN: 1,
+                Attributes.POPULATION_ARMOR: 0,
+                Attributes.POPULATION_DEFENSE: 0
             }
             for attribute_id, value in defaults.items:
                 cursor.execute(
@@ -211,6 +217,11 @@ def get_attribute_id(name):
         attribute_id = cursor.fetchone()[0]
     return attribute_id
 
+def insert_attribute(player_id,attribute_id,value,start_turn,expiry_turn):
+    with transaction() as cursor:
+        cursor.execute("INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) "
+                       "VALUES (?,?,?,?,?)",
+                       (player_id,attribute_id,value,start_turn,expiry_turn))
 
 def get_attribute(player_id, attribute_id):
     value = None
@@ -510,8 +521,97 @@ def calculate_conversion_success(quantity, chance):
 def get_pantheon(player_id):
     return 1
 
+# ----------------------------------------
+# Battles
+# ----------------------------------------
+
+def attack(player_id,other_player_id,quantity):
+    available_attackers = get_attribute(player_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
+    if quantity <= available_attackers:
+        attackers = quantity
+        attack_armor = get_attribute(player_id,Attributes.ARMOR)
+        attack_value = get_attribute(player_id,Attributes.ATTACK)
+
+        defenders = get_attribute(other_player_id,Attributes.SOLDIERS)
+        defense_armor = get_attribute(other_player_id,Attributes.ARMOR)
+        defense_value = get_attribute(other_player_id,Attributes.DEFENSE)
+
+        attack_damage = generate_damage(attackers,attack_value)
+        attackers_loss = math.floor(attack_damage /
+                            attack_armor)
+
+        defense_damage = generate_damage(defenders,defense_value)
+        defenders_loss = math.floor(defense_damage /
+                            defense_armor)
+
+        deal_defense_damage(player_id,attackers_loss)
+        deal_attack_damage(other_player_id,defenders_loss)
+
+
+        # If some of the attackers die, then they're all ineligible anyway
+        # If all of them die, they're all ineligible
+        # So we just remove attackers
+        attackers_made_ineligible = attackers
+
+        # This won't expire, because we have to hard reset it at the beginning of every turn anyway
+        insert_attribute(player_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -1 *attackers_made_ineligible,-1,-1)
+    else:
+        return False, "Insufficient attackers available"
+
+
+def generate_damage(quantity,limit):
+    total = 0
+    for attack in range(quantity):
+        total += random.randint(0,limit)
+    return total
+
+
+def deal_attack_damage(player_id,damage):
+    remaining_damage = math.floor(damage)
+    available_defenders = get_attribute(player_id,Attributes.SOLDIERS)
+    available_functionaries = get_attribute(player_id, Attributes.FUNCTIONARIES)
+    available_priests = get_attribute(player_id, Attributes.PRIESTS)
+
+
+    if available_defenders >= remaining_damage:
+        kill(player_id,remaining_damage,"soldiers")
+    else:
+        kill(player_id,available_defenders,"soldiers")
+        remaining_damage -= available_defenders
+        if available_functionaries >= remaining_damage:
+            kill(player_id,remaining_damage,"functionaries")
+        else:
+            kill(player_id, available_defenders, "functionaries")
+            remaining_damage -= available_functionaries
+            if available_priests >= remaining_damage:
+                kill(player_id, available_priests, "priests")
+            else:
+                kill(player_id,remaining_damage,"priests")
+    return True, "Success"
+
+
+def deal_defense_damage(player_id,damage):
+    soldiers = get_attribute(player_id, Attributes.SOLDIERS)
+    if soldiers >= damage:
+        kill(player_id,damage,"soldiers")
+    else:
+        kill(player_id,soldiers,"soldiers")
+
+
+def kill(player_id,quantity,type):
+    if type == "soldiers":
+        insert_attribute(player_id,Attributes.SOLDIERS,-1*quantity,-1,-1)
+    elif type == "functionaries":
+        insert_attribute(player_id, Attributes.FUNCTIONARIES, -1 * quantity, -1, -1)
+    elif type == "priests":
+        insert_attribute(player_id, Attributes.PRIESTS, -1 * quantity, -1, -1)
+    elif type == "attackers":
+        insert_attribute(player_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -1 * quantity, -1, -1)
+    else:
+        return False, "Incorrect type"
+    return True, "Success"
 
 # new_user("casi", 466015764919353346)
-complete_research(1, 1)
+# complete_research(1, 1)
 '''if __name__ == '__main__':
     app.run()'''
