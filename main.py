@@ -76,12 +76,12 @@ class connect:
 # ----------------------------------------
 def user_name_exists(name):
   with connect() as cursor:
-    cursor.execute("SELECT 1 FROM users WHERE name = ?", (name.casefold(),))
+    cursor.execute("SELECT 1 FROM players WHERE name = ?", (name.casefold(),))
     return cursor.fetchone() is not None
 
 def get_user_by_name(name):
   with connect() as cursor:
-    cursor.execute("SELECT discord_id FROM users WHERE name = ?", (name.casefold(),))
+    cursor.execute("SELECT discord_id FROM players WHERE name = ?", (name.casefold(),))
     row = cursor.fetchone()
     if row is None:
       return None
@@ -90,7 +90,7 @@ def get_user_by_name(name):
 
 def user_discord_id_exists(discord_id):
   with connect() as cursor:
-    cursor.execute("SELECT 1 FROM users WHERE discord_id = ?", (discord_id,))
+    cursor.execute("SELECT 1 FROM players WHERE discord_id = ?", (discord_id,))
     return cursor.fetchone() is not None
 
 def new_user(name, discord_id):

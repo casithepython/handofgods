@@ -83,7 +83,7 @@ async def research(ctx, *, tech_name):
 
 
 @bot.command()
-async def battle(ctx, *, player_name, quantity):
+async def battle(ctx, player_name:str, quantity:int):
     player_discord = ctx.author.id
     other_player_discord = db.get_user_by_name(player_name)
 
