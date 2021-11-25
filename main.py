@@ -226,7 +226,7 @@ def get_attribute(player_id, attribute_id):
 # ----------------------------------------
 # Tech
 # ----------------------------------------
-def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
+def new_tech(name, description, cost, prerequisites=[], bonuses=[], chance_multiplier=1):
     # bonuses should be formatted as [[tech_1_id,value1],[tech_2_id,value2]]
     if bonuses is None:
         bonuses = []
@@ -239,6 +239,11 @@ def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
             for bonus in bonuses:
                 cursor.execute("INSERT INTO tech_bonuses (tech_id,attribute_id,value) VALUES (?,?,?)",
                                (tech_id, bonus[0], bonus[1]))
+            for prerequisite in prerequisites:
+                # Prereqs should be formatted as [prerequisite_id, is_hard_0_or_1, cost_bonus]
+                cursor.execute(
+                    "INSERT INTO tech_prerequisites (tech_id,prerequisite_id,is_hard,cost_bonus) VALUES (?,?,?,?)",
+                    (tech_id, prerequisite[0], prerequisite[1], prerequisite[2]))
         return True
     else:
         return False
@@ -272,12 +277,44 @@ def update_tech_bonus(tech_id, attribute_id, value):
         return False, "no existing bonus"  # TODO Only return value
 
 
+def add_tech_prerequisite(tech_id, prerequisite_id, is_hard, cost_bonus):
+    with transaction() as cursor:
+        cursor.execute("INSERT INTO tech_prerequisites (tech_id, prerequisite_id, is_hard, cost_bonus) VALUES "
+                       "(?,?,?,?)", (tech_id, prerequisite_id, is_hard, cost_bonus))
+
+
+def get_tech_prerequisites(tech_id):
+    prerequisites = []
+    with transaction() as cursor:
+        cursor.execute("SELECT prerequisite_id,is_hard,cost_bonus FROM tech_prerequisites WHERE tech_id = ?",
+                       (tech_id,))
+        for prerequisite in json.loads(cursor.fetchall()[0][0]):
+            prerequisites.append(prerequisite)
+    return prerequisites
+
+
+def get_hard_prerequisites(tech_id):
+    prerequisites = []
+    with transaction() as cursor:
+        prerequisites = [prerequisite[0] for prerequisite in
+                         cursor.execute("SELECT prerequisite_id from tech_prerequisites WHERE id = ?", (tech_id,))]
+    return prerequisites
+
+
 def get_tech_id(name):
     tech_id = None
     with transaction() as cursor:
-        cursor.execute("SELECT id from tech WHERE LOWER(id) = ?", (name.lower(),))
+        cursor.execute("SELECT id from tech WHERE LOWER(name) = ?", (name.lower(),))
         tech_id = cursor.fetchone()[0]
     return tech_id
+
+
+def get_tech_name(tech_id):
+    name = None
+    with transaction() as cursor:
+        cursor.execute("SELECT name from tech WHERE id = ?", (tech_id.lower(),))
+        name = cursor.fetchone()[0]
+    return name
 
 
 def get_tech_cost(tech_id):
@@ -311,37 +348,53 @@ def get_player_tech(player_id):
     return tech
 
 
+def check_prerequisites(player_id, tech_id):
+    required_prerequisites = []
+    player_tech = get_player_tech(player_id)
+    for prerequisite in get_hard_prerequisites(tech_id):
+        if prerequisite not in player_tech:
+            required_prerequisites.append(prerequisite)
+
+    return len(required_prerequisites) is 0, required_prerequisites
+
+
 # ----------------------------------------
 # Research
 # ----------------------------------------
+
+
 def attempt_research(player_id, tech_id, method):
     if tech_id not in get_player_tech(player_id):
-        if method == "divine_inspiration":
-            attribute_rate = get_attribute(player_id, 6)
-            attribute_cost = get_attribute(player_id, 7)
-        elif method == "awake_revelation":
-            attribute_rate = get_attribute(player_id, 8)
-            attribute_cost = get_attribute(player_id, 9)
-        elif method == "asleep_revelation":
-            attribute_rate = get_attribute(player_id, 10)
-            attribute_cost = get_attribute(player_id, 11)
-        elif method == "divine_avatar":
-            attribute_rate = get_attribute(player_id, 12)
-            attribute_cost = get_attribute(player_id, 13)
-        else:
-            return False, "Invalid method"
-
-        cost = calculate_tech_cost(player_id, tech_id)
-        attempt_cost = attribute_cost * get_research_cost_multiplier(player_id)
-        if spend_power(player_id, attempt_cost) and get_power(player_id) > cost:
-            if random.random() <= attribute_rate:
-                complete_research(player_id, tech_id)
-                spend_power(player_id, cost)
-                return True, "success"
+        needs_prerequisites = check_prerequisites(player_id, tech_id)
+        if needs_prerequisites[0]:
+            if method == "divine_inspiration":
+                attribute_rate = get_attribute(player_id, 6)
+                attribute_cost = get_attribute(player_id, 7)
+            elif method == "awake_revelation":
+                attribute_rate = get_attribute(player_id, 8)
+                attribute_cost = get_attribute(player_id, 9)
+            elif method == "asleep_revelation":
+                attribute_rate = get_attribute(player_id, 10)
+                attribute_cost = get_attribute(player_id, 11)
+            elif method == "divine_avatar":
+                attribute_rate = get_attribute(player_id, 12)
+                attribute_cost = get_attribute(player_id, 13)
             else:
-                return False, "failed chance"
+                return False, "Invalid method"
+
+            cost = calculate_tech_cost(player_id, tech_id)
+            attempt_cost = attribute_cost * get_research_cost_multiplier(player_id)
+            if spend_power(player_id, attempt_cost) and get_power(player_id) > cost:
+                if random.random() <= attribute_rate:
+                    complete_research(player_id, tech_id)
+                    spend_power(player_id, cost)
+                    return True, "success"
+                else:
+                    return False, "failed chance"
+            else:
+                return False, "Insufficient DP"
         else:
-            return False, "Insufficient DP"
+            return False, needs_prerequisites[1]
     else:
         return False, "already researched"
 
@@ -387,6 +440,10 @@ def current_turn():
 
 def new_turn():
     pass
+    # Check for and add income
+    # Reset army counter
+    # Check for pantheon acceptance
+    #
 
 
 # ----------------------------------------

@@ -4,7 +4,9 @@ DROP TABLE IF EXISTS attributes;
 DROP TABLE IF EXISTS pantheons;
 DROP TABLE IF EXISTS tech;
 DROP TABLE IF EXISTS tech_bonuses;
+DROP TABLE IF EXISTS tech_prerequisites;
 DROP TABLE IF EXISTS system_variables;
+
 CREATE TABLE players (
     /* basic stats */
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +48,14 @@ CREATE TABLE tech_bonuses (
     tech_id INTEGER,
     attribute_id INTEGER,
     value FLOAT
+);
+
+CREATE TABLE tech_prerequisites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tech_id INTEGER,
+    prerequisite_id INTEGER,
+    is_hard BOOLEAN NOT NULL CHECK (is_hard IN (0, 1)) DEFAULT 1,
+    cost_bonus INTEGER DEFAULT 0
 );
 CREATE TABLE system_variables (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
