@@ -14,8 +14,7 @@ CREATE TABLE players (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
     discord_id VARCHAR(255),
-    pantheon INTEGER DEFAULT -1,
-    tech JSON
+    pantheon INTEGER DEFAULT -1
     );
 
 CREATE TABLE player_attributes(

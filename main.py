@@ -76,7 +76,7 @@ class transaction:
 def new_user(name, discord_id):
     if discord_id not in get_discord_ids() and name not in list(map(lambda a: a.lower(), get_player_names())):
         with transaction() as cursor:
-            cursor.execute('INSERT INTO players (name,discord_id,tech) VALUES (?,?,?)', (name, discord_id, json.dumps([])))
+            cursor.execute('INSERT INTO players (name,discord_id) VALUES (?,?,?)', (name, discord_id))
             cursor.execute("SELECT id FROM players WHERE name = ?", (name,))
             player_id = cursor.fetchone()[0]
             defaults = {
@@ -292,21 +292,19 @@ def get_tech_chance_multiplier(tech_id):
     return multiplier
 
 
-def get_player_tech(player_id):
-    tech = []
+def get_player_techs(player_id):
+    techs = []
     with transaction() as cursor:
-        cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
-        tech_arr = cursor.fetchall()
-        if len(tech_arr) > 0 and len(tech_arr[0]) > 0:
-            tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
-    return tech
+        cursor.execute("SELECT technology_id FROM player_technologies WHERE player_id = ?", (player_id,))
+        techs = list(map(lambda x: x[0], cursor.fetchall()))
+    return techs
 
 
 # ----------------------------------------
 # Research
 # ----------------------------------------
 def attempt_research(player_id, tech_id, method):
-    if tech_id not in get_player_tech(player_id):
+    if tech_id not in get_player_techs(player_id):
         if method == "divine_inspiration":
             attribute_rate = get_attribute(player_id, 6)
             attribute_cost = get_attribute(player_id, 7)
@@ -342,26 +340,28 @@ def calculate_tech_cost(player_id, tech_id):
     player_cost_multiplier = get_research_cost_multiplier(player_id)
     return base_cost * player_cost_multiplier
 
+def player_has_technology(player_id, technology_id):
+    with transaction() as cursor:
+        cursor.execute("SELECT 1 FROM player_technologies WHERE player_id = ? AND technology_id = ?", (player_id, technology_id))
+        return cursor.fetchone() is not None
 
 def complete_research(player_id, tech_id):
-    tech = get_player_tech(player_id)
-    with transaction() as cursor:
-        if tech_id not in tech:
-            tech.append(tech_id)
-            cursor.execute("UPDATE players SET tech = ? WHERE id = ?", (json.dumps(tech), player_id))
-            cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
-            bonuses = []
-            for temp_bonus in list(cursor.fetchall()):
-                bonuses.append(list(temp_bonus))
+    if not player_has_technology(player_id, tech_id):
+        with transaction() as cursor:
+            cursor.execute("INSERT INTO player_technologies (player_id, technology_id) VALUES (?, ?)", (player_id, tech_id))
 
-            for bonus_pair in bonuses:
+            cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
+            
+            for bonus in cursor.fetchall():
+                bonus_pair = list(bonus)
+
                 cursor.execute(
                     "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values ("
                     "?,?,?,?,?)",
                     (player_id, bonus_pair[0], bonus_pair[1], -1, -1))
             return True
-        else:
-            return False
+    else:
+        return False
 
 
 # ----------------------------------------
