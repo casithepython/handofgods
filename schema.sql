@@ -13,9 +13,10 @@ CREATE TABLE players (
     /* basic stats */
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
+    display_name VARCHAR(255),
     discord_id VARCHAR(255),
     pantheon INTEGER DEFAULT -1
-    );
+);
 
 CREATE TABLE player_attributes(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,17 +33,20 @@ CREATE TABLE player_technologies (
 );
 CREATE TABLE attributes(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255)
-    );
+    name VARCHAR(255),
+    display_name VARCHAR(255)
+);
 
 CREATE TABLE pantheons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255)
-    );
+    name VARCHAR(255),
+    display_name VARCHAR(255)
+);
 
 CREATE TABLE technologies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
+    display_name VARCHAR(255),
     description VARCHAR(255),
     cost INTEGER,
     chance_multiplier FLOAT DEFAULT 1
@@ -57,5 +61,6 @@ CREATE TABLE tech_bonuses (
 CREATE TABLE system_variables (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
+    display_name VARCHAR(255),
     value VARCHAR(255)
 )
