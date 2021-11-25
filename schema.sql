@@ -19,7 +19,7 @@ CREATE TABLE players (
     );
 
 CREATE TABLE player_attributes(
-    column_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_id INTEGER,
     attribute_id INTEGER,
     value FLOAT,
