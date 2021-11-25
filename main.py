@@ -342,9 +342,8 @@ def calculate_tech_cost(player_id, tech_id):
 
 
 def complete_research(player_id, tech_id):
+    tech = get_player_tech(player_id)
     with transaction() as cursor:
-        cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
-        tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
         if tech_id not in tech:
             tech.append(tech_id)
             cursor.execute("UPDATE players SET tech = ? WHERE id = ?", (json.dumps(tech), player_id))
