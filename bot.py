@@ -101,7 +101,7 @@ async def battle(ctx, player_name:str, quantity:int):
                       'Your probability of eliminating all enemy troops is {probability}.' \
                       'The expected damage is {expected_soldiers} soldiers, {expected_functionaries} functionaries' \
                       ', and {expected_priests} priests. The expected troop loss is {expected_loss}.' \
-                      'Remember that these probabilities are only estimates.' \
+                      'Remember that these probabilities are only estimates.\n' \
                       ':regional_indicator_a: To continue with the battle\n' \
                       ':regional_indicator_b: To cancel the battle'.format(
             other_player_name=player_name, quantity=quantity, probability=expected_outcome[2],

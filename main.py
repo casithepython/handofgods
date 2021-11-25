@@ -319,7 +319,7 @@ def get_tech_id(name):
 def get_tech_name(tech_id):
     name = None
     with connect() as cursor:
-        cursor.execute("SELECT name from tech WHERE id = ?", (tech_id.lower(),))
+        cursor.execute("SELECT name from technologies WHERE id = ?", (tech_id.lower(),))
         name = cursor.fetchone()[0]
     return name
 
@@ -443,7 +443,7 @@ def complete_research(discord_id, tech_id):
 def current_turn():
   turn = None
   with connect() as cursor:
-    cursor.execute("SELECT value SYSTEM system_variables WHERE name = ?", ("turn",))
+    cursor.execute("SELECT value FROM system_variables WHERE name = ?", ("turn",))
     turn = cursor.fetchone()[0]
   return turn
 
