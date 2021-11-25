@@ -566,6 +566,10 @@ def generate_damage(quantity,limit):
   return total
 
 
+def expected_damage(player_discord,other_player_discord,quantity):
+  return [[0,0,0],0]
+
+
 def deal_attack_damage(player_id,damage):
   remaining_damage = math.floor(damage)
   available_defenders = get_attribute(player_id,Attributes.SOLDIERS)
