@@ -59,7 +59,7 @@ class Attributes:
     ATTACKS_PER_TURN = 47
     FUNCTIONARY_ARMOR = 48
     FUNCTIONARY_DEFENSE = 49
-
+    TOTAL_PRIEST_POWER = 50
 
 class connect:
     def __init__(self):
@@ -161,7 +161,8 @@ def new_user(name, discord_id):
                 Attributes.ATTACKS_PER_TURN: 1,
                 Attributes.FUNCTIONARY_ARMOR: 0,
                 Attributes.FUNCTIONARY_DEFENSE: 0,
-                Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0
+                Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0,
+                Attributes.TOTAL_PRIEST_POWER: 0
             }
             for attribute_id, value in defaults.items:
                 cursor.execute(
@@ -229,6 +230,13 @@ def spend_power(discord_id, power):
         return False
 
 
+def has_sufficient_channeling_power(discord_id,amount):
+  return amount <= get_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER)
+
+
+
+def spend_channeling_power(discord_id,amount):
+  insert_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER,-1*amount,-1,-1)
 # ----------------------------------------
 # Attributes
 # ----------------------------------------
@@ -422,15 +430,21 @@ def attempt_research(discord_id, tech_id, method, priest=False):
         success_cost = calculate_tech_cost(discord_id, tech_id)
         attempt_cost = attribute_cost * get_research_cost_multiplier(discord_id)
 
+        priest_used = False
         if priest:
+          if has_sufficient_channeling_power(discord_id,attempt_cost+success_cost):
             attribute_rate += get_attribute(discord_id, Attributes.PRIEST_RESEARCH_BONUS)
+            priest_used = True
 
         if get_power(discord_id) >= attempt_cost + success_cost:
             spend_power(discord_id, attempt_cost)
-
+            if priest_used:
+              spend_channeling_power(discord_id,attempt_cost)
             if random.random() <= attribute_rate:
                 complete_research(discord_id, tech_id)
                 spend_power(discord_id, success_cost)
+                if priest_used:
+                  spend_channeling_power(discord_id, success_cost)
                 return True, "Successfully researched " + get_tech_name(tech_id) + "."
             else:
                 return False, "Failed research chance, " + str(attempt_cost) + " DP spent."
@@ -520,31 +534,35 @@ def attempt_conversion(player_discord, quantity, person_type, other_player_disco
             else:
                 return False, "Invalid type"
             if attempt_cost * quantity <= get_power(player_discord):
-                spend_power(player_discord, attempt_cost * quantity)
-                converts = calculate_converts(quantity, conversion_rate)
-                with connect() as cursor:
-                    if person_type == "enemy_priest":
-                        cursor.execute(
-                            "INSERT INTO player_attributes (discord_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
-                            "?,?,?,?,?)",
-                            (other_player_discord, Attributes.PRIESTS, -1 * converts, -1, -1))
-                    elif person_type == "enemy":
-                        cursor.execute(
-                            "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                            "?,?,?,?,?)",
-                            (other_player_discord, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
-                        cursor.execute(
-                            "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                            "?,?,?,?,?)",
-                            (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
-                    elif person_type == "neutral":
-                        cursor.execute(
-                            "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                            "?,?,?,?,?)",
-                            (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
-                    else:
-                        return False, "Something went wrong that should never go wrong. Congratulations, you broke my system."
-                    return True, [converts, attempt_cost * quantity]
+              if attempt_cost * quantity <= get_attribute(player_discord,Attributes.TOTAL_PRIEST_POWER):
+                  spend_power(player_discord, attempt_cost * quantity)
+                  spend_channeling_power(player_discord,attempt_cost*quantity)
+                  converts = calculate_converts(quantity, conversion_rate)
+                  with connect() as cursor:
+                      if person_type == "enemy_priest":
+                          cursor.execute(
+                              "INSERT INTO player_attributes (discord_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
+                              "?,?,?,?,?)",
+                              (other_player_discord, Attributes.PRIESTS, -1 * converts, -1, -1))
+                      elif person_type == "enemy":
+                          cursor.execute(
+                              "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                              "?,?,?,?,?)",
+                              (other_player_discord, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
+                          cursor.execute(
+                              "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                              "?,?,?,?,?)",
+                              (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                      elif person_type == "neutral":
+                          cursor.execute(
+                              "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                              "?,?,?,?,?)",
+                              (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                      else:
+                          return False, "Something went wrong that should never go wrong. Congratulations, you broke my system."
+                      return True, [converts, attempt_cost * quantity]
+              else:
+                return False, "Insufficient priest channeling power."
             else:
                 return False, "Insufficient DP."
         else:

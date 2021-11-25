@@ -74,7 +74,33 @@ async def research(ctx, *, tech_name):
                 if reaction != emoji:
                     await message.remove_reaction(reaction, ctx.me)
 
-            result_text = db.attempt_research(player_discord, tech_id, reactions[emoji])[1]
+            def check_author(author):
+                def inner_check(message):
+                    if message.author.id != ctx.author.id:
+                        return False
+                    return True
+
+                return inner_check
+
+            priests = None
+            counter = 3
+            while priests is None:
+                if counter == 0:
+                    await ctx.send("Incorrect response too many times. Research aborted.")
+                    return
+                await ctx.send("Do you wish to use priests for this research? Type yes or no.")
+                decision = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
+                if decision.content.lower() == 'yes':
+                    priests = True
+                    break
+                elif decision.content.lower() == 'no':
+                    priests = False
+                    break
+                else:
+                    await ctx.send("Incorrect response.")
+                    counter -= 1
+
+            result_text = db.attempt_research(player_discord, tech_id, reactions[emoji], priests)[1]
             await ctx.send(result_text)
             return
         except TimeoutError:
@@ -185,14 +211,14 @@ async def convert(ctx, quantity: int):
                       ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, ' \
                       'Cost {enemy_cost})\n' \
                       ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%},' \
-                      ' Cost {priest_cost})\n'\
+                      ' Cost {priest_cost})\n' \
             .format(neutral_success_rate=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE),
                     neutral_cost=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST),
                     enemy_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE),
                     enemy_cost=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST),
                     priest_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE),
                     priest_cost=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST),
-        )
+                    )
 
         message = await ctx.send(output_text)
         reactions = {
@@ -212,10 +238,7 @@ async def convert(ctx, quantity: int):
                 return False
             return True
 
-
-
         try:
-
 
             user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
             emoji = str(user_reaction.emoji)
@@ -244,6 +267,7 @@ async def convert(ctx, quantity: int):
                         if message.author.id != ctx.author.id:
                             return False
                         return True
+
                     return inner_check
 
                 await ctx.send("Please specify the player to attempt to convert away from. \n"
@@ -255,7 +279,8 @@ async def convert(ctx, quantity: int):
                                                 person_type=reactions[emoji],
                                                 other_player_discord=db.get_user_by_name(other_player_name))
                 if results[0]:
-                    result_text = "Successfully converted {converts}, spending {cost} DP.".format(converts=results[1][0],cost=results[1][1])
+                    result_text = "Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
+                        converts=results[1][0], cost=results[1][1])
                 elif not results[0]:
                     result_text = results[1]
                 else:
