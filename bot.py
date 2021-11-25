@@ -17,19 +17,18 @@ bot = commands.Bot(command_prefix="?")
 @bot.command()
 async def research(ctx, *, tech_name):
     tech_id = db.get_tech_id(tech_name)
-    player_id = db.get_player_id(ctx.author.id)
-
+    player_discord = ctx.author.id
     if tech_id is None:
         await ctx.send('Technology "{}" does not exist.'.format(tech_name))
         return
-    elif player_id is None:
+    elif player_discord is None:
         await ctx.send('You have not joined this game yet.')
         return
     else:
         # Phase 1: output text
-        success_cost = db.calculate_tech_cost(player_id, tech_id)
-        multiplier = db.get_research_cost_multiplier(player_id)
-        attempt_costs = tuple(map(lambda x: db.get_attribute(player_id, x) * multiplier, (
+        success_cost = db.calculate_tech_cost(player_discord, tech_id)
+        multiplier = db.get_attribute(player_discord, Attributes.RESEARCH_COST_MULTIPLIER)
+        attempt_costs = tuple(map(lambda x: db.get_attribute(player_discord, x) * multiplier, (
             db.Attributes.DIVINE_INSPIRATION_COST,
             db.Attributes.AWAKE_REVELATION_COST,
             db.Attributes.ASLEEP_REVELATION_COST,
@@ -37,14 +36,14 @@ async def research(ctx, *, tech_name):
         )))
         output_text = 'Attempt research of the technology "{tech_name}" (success cost {success_cost}):\n' \
                       ':regional_indicator_a: for divine inspiration (success probability {div_inspr_prob:.1%}, attempt cost {attempt_costs[0]})\n' \
-                      ':regional_indicator_b: for waking revalation (success probability {awake_rev_prob:.1%}, attempt cost {attempt_costs[1]})\n' \
-                      ':regional_indicator_c: for dream revalation (success probability {dream_rev_prob:.1%}, attempt cost {attempt_costs[2]})\n' \
+                      ':regional_indicator_b: for waking revelation (success probability {awake_rev_prob:.1%}, attempt cost {attempt_costs[1]})\n' \
+                      ':regional_indicator_c: for dream revelation (success probability {dream_rev_prob:.1%}, attempt cost {attempt_costs[2]})\n' \
                       ':regional_indicator_d: to incarnate and command research (success probability {divine_avatar_prob:.1%}, attempt cost {attempt_costs[3]})' \
             .format(tech_name=tech_name,
-                    div_inspr_prob=db.get_attribute(player_id, db.Attributes.DIVINE_INSPIRATION_RATE),
-                    awake_rev_prob=db.get_attribute(player_id, db.Attributes.AWAKE_REVELATION_RATE),
-                    dream_rev_prob=db.get_attribute(player_id, db.Attributes.ASLEEP_REVELATION_RATE),
-                    divine_avatar_prob=db.get_attribute(player_id, db.Attributes.DIVINE_AVATAR_RATE),
+                    div_inspr_prob=db.get_attribute(player_discord, db.Attributes.DIVINE_INSPIRATION_RATE),
+                    awake_rev_prob=db.get_attribute(player_discord, db.Attributes.AWAKE_REVELATION_RATE),
+                    dream_rev_prob=db.get_attribute(player_discord, db.Attributes.ASLEEP_REVELATION_RATE),
+                    divine_avatar_prob=db.get_attribute(player_discord, db.Attributes.DIVINE_AVATAR_RATE),
                     success_cost=success_cost, attempt_costs=attempt_costs
                     )
         message = await ctx.send(output_text)
@@ -75,7 +74,9 @@ async def research(ctx, *, tech_name):
                 if reaction != emoji:
                     await message.remove_reaction(reaction, ctx.me)
 
-            db.attempt_research(player_id, tech_id, reactions[emoji])
+            result_text = db.attempt_research(player_discord, tech_id, reactions[emoji])[1]
+            await ctx.send(result_text)
+            return
         except TimeoutError:
             ctx.send("Timed out")
 
@@ -83,7 +84,7 @@ async def research(ctx, *, tech_name):
 
 
 @bot.command()
-async def battle(ctx, player_name:str, quantity:int):
+async def battle(ctx, player_name: str, quantity: int):
     player_discord = ctx.author.id
     other_player_discord = db.get_user_by_name(player_name)
 
@@ -168,8 +169,9 @@ async def battle(ctx, player_name:str, quantity:int):
         except TimeoutError:
             ctx.send("Timed out")
 
+
 @bot.command()
-async def convert(ctx,quantity):
+async def convert(ctx, quantity: int):
     player_discord = ctx.author.id
 
     if player_discord is None:
@@ -177,17 +179,19 @@ async def convert(ctx,quantity):
         return
     else:
         # Phase 1: output text
-        output_text = \
-            'What type of people do you want to convert?\n' \
-            ':regional_indicator_a: Neutrals (Success rate {neutral_success_rate:.1%}, Cost {neutral_cost})\n' \
-            ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, Cost {enemy_cost})\n' \
-            ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%}, Cost {priest_cost})'.format(
-            neutral_success_rate=db.get_attribute(player_discord,Attributes.NEUTRAL_CONVERSION_RATE),
-            neutral_cost=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST),
-            enemy_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE),
-            enemy_cost=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST),
-            priest_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE),
-            priest_cost=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST),
+        output_text = 'What type of people do you want to convert?\n' \
+                      ':regional_indicator_a: Neutrals (Success rate {neutral_success_rate:.1%},' \
+                      ' Cost {neutral_cost})\n' \
+                      ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, ' \
+                      'Cost {enemy_cost})\n' \
+                      ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%},' \
+                      ' Cost {priest_cost})\n'\
+            .format(neutral_success_rate=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE),
+                    neutral_cost=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST),
+                    enemy_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE),
+                    enemy_cost=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST),
+                    priest_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE),
+                    priest_cost=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST),
         )
 
         message = await ctx.send(output_text)
@@ -208,9 +212,11 @@ async def convert(ctx,quantity):
                 return False
             return True
 
-        def check_message_author(user):
-            return user == ctx.author
+
+
         try:
+
+
             user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
             emoji = str(user_reaction.emoji)
 
@@ -225,27 +231,35 @@ async def convert(ctx,quantity):
                                                 person_type=reactions[emoji],
                                                 other_player_discord=None)
                 if results[0]:
-                  result_text = "Successfully converted {converts}.".format(converts=results[1])
+                    result_text = "Successfully converted {converts}.".format(converts=results[1])
                 elif not results[0]:
-                  result_text = results[1]
+                    result_text = results[1]
                 else:
-                  result_text = "This error should not exist."
+                    result_text = "This error should not exist."
                 await ctx.send(result_text)
                 return
-            elif reactions[emoji] in ["enemy","enemy_priest"]:
+            elif reactions[emoji] in ["enemy", "enemy_priest"]:
+                def check_author(author):
+                    def inner_check(message):
+                        if message.author.id != ctx.author.id:
+                            return False
+                        return True
+                    return inner_check
+
                 await ctx.send("Please specify the player to attempt to convert away from. \n"
                                "Avoid unnecessary whitespaces or characters.")
-                other_player_name, _ = await bot.wait_for('message',timeout=30.0,check=check_message_author(ctx.author))
+                other_player_name = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
+                other_player_name = other_player_name.content
                 results = db.attempt_conversion(player_discord=player_discord,
                                                 quantity=quantity,
                                                 person_type=reactions[emoji],
                                                 other_player_discord=db.get_user_by_name(other_player_name))
                 if results[0]:
-                  result_text = "Successfully converted {converts}.".format(converts=results[1])
+                    result_text = "Successfully converted {converts}, spending {cost} DP.".format(converts=results[1][0],cost=results[1][1])
                 elif not results[0]:
-                  result_text = results[1]
+                    result_text = results[1]
                 else:
-                  result_text = "This error should not exist."
+                    result_text = "This error should not exist."
                 await ctx.send(result_text)
                 return
             else:
