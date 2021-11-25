@@ -61,7 +61,7 @@ class transaction:
         self.__connection.row_factory = sqlite3.Row
         self.cursor = self.__connection.cursor()
         return self.cursor
-    def __exit__(self, exc_type, exc_value):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         self.__connection.commit()
         self.__connection.close()
 
