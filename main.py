@@ -460,54 +460,61 @@ def new_turn():
 # ----------------------------------------
 # Conversion
 # ----------------------------------------
-def attempt_conversion(player_id, other_player_id, quantity, person_type):
-    if get_pantheon(player_id) is None or get_pantheon(other_player_id) is None or get_pantheon(
-            player_id) is not get_pantheon(other_player_id):
-        if person_type == "enemy":
-            if quantity <= get_attribute(other_player_id, Attributes.FUNCTIONARIES):
-                conversion_rate = get_attribute(player_id, Attributes.ENEMY_CONVERSION_RATE)
-                attempt_cost = get_attribute(player_id, Attributes.ENEMY_CONVERSION_COST)
+def attempt_conversion(player_discord, quantity, person_type, other_player_discord=None):
+    if person_type is not "neutral" or other_player_discord is None and person_type is "neutral":
+        if get_pantheon(player_discord) is None or get_pantheon(other_player_discord) is None or get_pantheon(player_discord) is not get_pantheon(other_player_discord):
+            if person_type == "enemy":
+                if quantity <= get_attribute(other_player_discord, Attributes.FUNCTIONARIES):
+                    conversion_rate = get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE)
+                    attempt_cost = get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST)
+                else:
+                    return False, "Insufficient functionaries"
+            elif person_type == "enemy_priest":
+                if quantity <= get_attribute(other_player_discord, Attributes.PRIESTS):
+                    conversion_rate = get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE)
+                    attempt_cost = get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST)
+                else:
+                    return False, "Insufficient priests"
+            elif person_type == "neutral":
+                conversion_rate = get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE)
+                attempt_cost = get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST)
             else:
-                return False, "Insufficient functionaries"
-        elif person_type == "enemy_priest":
-            if quantity <= get_attribute(other_player_id, Attributes.PRIESTS):
-                conversion_rate = get_attribute(player_id, Attributes.ENEMY_PRIEST_CONVERSION_RATE)
-                attempt_cost = get_attribute(player_id, Attributes.ENEMY_PRIEST_CONVERSION_COST)
+                return False, "Invalid type"
+            if attempt_cost * quantity <= get_power(player_discord):
+                spend_power(player_discord, attempt_cost * quantity)
+                converts = calculate_converts(quantity, conversion_rate)
+                with transaction() as cursor:
+                    if person_type == "enemy_priest":
+                        cursor.execute(
+                            "INSERT INTO player_attributes (player_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
+                            "?,?,?,?,?)",
+                            (other_player_discord, Attributes.PRIESTS, -1 * converts, -1, -1))
+                    elif person_type == "enemy":
+                        cursor.execute(
+                            "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                            "?,?,?,?,?)",
+                            (other_player_discord, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
+                        cursor.execute(
+                            "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                            "?,?,?,?,?)",
+                            (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                    elif person_type == "neutral":
+                        cursor.execute(
+                            "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                            "?,?,?,?,?)",
+                            (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                    else:
+                        return False, "Something went wrong that should never go wrong. Congratulations, you broke my system."
+                    return True, converts
             else:
-                return False, "Insufficient priests"
-        elif person_type == "neutral":
-            conversion_rate = get_attribute(player_id, Attributes.NEUTRAL_CONVERSION_RATE)
-            attempt_cost = get_attribute(player_id, Attributes.NEUTRAL_CONVERSION_COST)
+                return False, "Insufficient DP."
         else:
-            return False, "Invalid type"
-        if attempt_cost * quantity <= get_power(player_id):
-            spend_power(player_id, attempt_cost * quantity)
-            converts = calculate_conversion_success(quantity, conversion_rate)
-            with transaction() as cursor:
-                if person_type == "enemy_priest":
-                    cursor.execute(
-                        "INSERT INTO player_attributes (player_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
-                        "?,?,?,?,?)",
-                        (other_player_id, Attributes.PRIESTS, -1 * converts, -1, -1))
-                elif person_type == "enemy":
-                    cursor.execute(
-                        "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                        "?,?,?,?,?)",
-                        (other_player_id, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
-                    cursor.execute(
-                        "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                        "?,?,?,?,?)",
-                        (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
-                elif person_type == "neutral":
-                    cursor.execute(
-                        "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                        "?,?,?,?,?)",
-                        (player_id, Attributes.FUNCTIONARIES, converts, -1, -1))
+            return False, "Cannot convert away from members of the same pantheon."
     else:
-        return False, "Same pantheon"
+        return False, "Do not specify other player when converting neutrals."
 
 
-def calculate_conversion_success(quantity, chance):
+def calculate_converts(quantity, chance):
     count = 0
     for i in range(quantity):
         if random.random() <= chance:

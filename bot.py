@@ -158,7 +158,8 @@ async def battle(ctx, player_name, quantity):
         except TimeoutError:
             ctx.send("Timed out")
 
-
+@bot.command()
+async def convert(ctx,):
 # @bot.command()
 # async def test(ctx):
 #   tech_name = "Example Technology"
