@@ -21,7 +21,7 @@ CREATE TABLE players (
 
 CREATE TABLE player_attributes(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER,
+    discord_id INTEGER,
     attribute_id INTEGER,
     value FLOAT,
     start_turn INTEGER DEFAULT -1,
@@ -29,7 +29,7 @@ CREATE TABLE player_attributes(
 );
 CREATE TABLE player_technologies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER,
+    discord_id INTEGER,
     technology_id INTEGER
 );
 CREATE TABLE attributes(

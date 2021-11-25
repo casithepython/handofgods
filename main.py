@@ -153,11 +153,11 @@ def new_user(name, discord_id):
         Attributes.BONUS_POWER_PER_PRIEST: 0,
         Attributes.ATTACKS_PER_TURN: 1,
         Attributes.POPULATION_ARMOR: 0,
-        Attributes.POPULATION_DEFENSE: 0
-
+        Attributes.POPULATION_DEFENSE: 0,
+        Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0
       }
       for attribute_id, value in defaults.items:
-        cursor.execute("INSERT INTO player_attributes (player_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
+        cursor.execute("INSERT INTO player_attributes (discord_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
               (discord_id, attribute_id, value, -1))
     return True
   else:
@@ -206,7 +206,7 @@ def spend_power(discord_id, power):
   if power <= player_power:
     with connect() as cursor:
       cursor.execute(
-        "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
+        "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
         (discord_id, 35, -power, -1, -1))
     return True
   else:
@@ -225,7 +225,7 @@ def get_attribute_id(name):
 
 def insert_attribute(discord_id,attribute_id,value,start_turn,expiry_turn):
   with connect() as cursor:
-      cursor.execute("INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) "
+      cursor.execute("INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) "
                       "VALUES (?,?,?,?,?)",
                       (discord_id,attribute_id,value,start_turn,expiry_turn))
 
@@ -234,7 +234,7 @@ def get_attribute(discord_id, attribute_id):
   turn = current_turn()
   with connect() as cursor:
     cursor.execute(
-      "SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
+      "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
       "expiry_turn>?) AND start_turn<=?",
       (discord_id, attribute_id, turn, turn))
     value = cursor.fetchone()[0]
@@ -347,13 +347,13 @@ def get_tech_chance_multiplier(tech_id):
 def get_player_techs(discord_id):
   techs = []
   with connect() as cursor:
-    cursor.execute("SELECT technology_id FROM player_technologies WHERE player_id = ?", (discord_id,))
+    cursor.execute("SELECT technology_id FROM player_technologies WHERE discord_id = ?", (discord_id,))
     techs = list(map(lambda x: x[0], cursor.fetchall()))
   return techs
 
 def player_has_tech(discord_id, tech_id):
   with connect() as cursor:
-    cursor.execute("SELECT 1 FROM player_technologies WHERE player_id = ? AND technology_id = ?", (discord_id, tech_id))
+    cursor.execute("SELECT 1 FROM player_technologies WHERE discord_id = ? AND technology_id = ?", (discord_id, tech_id))
     return cursor.fetchone() is not None
 
 def check_prerequisites(discord_id, tech_id):
@@ -412,7 +412,7 @@ def calculate_tech_cost(discord_id, tech_id):
 
 def player_has_technology(discord_id, technology_id):
   with connect() as cursor:
-    cursor.execute("SELECT 1 FROM player_technologies WHERE player_id = ? AND technology_id = ?", (discord_id, technology_id))
+    cursor.execute("SELECT 1 FROM player_technologies WHERE discord_id = ? AND technology_id = ?", (discord_id, technology_id))
     return cursor.fetchone() is not None
 
 def complete_research(discord_id, tech_id):
@@ -420,7 +420,7 @@ def complete_research(discord_id, tech_id):
     return False
   if not player_has_technology(discord_id, tech_id):
     with connect() as cursor:
-      cursor.execute("INSERT INTO player_technologies (player_id, technology_id) VALUES (?, ?)", (discord_id, tech_id))
+      cursor.execute("INSERT INTO player_technologies (discord_id, technology_id) VALUES (?, ?)", (discord_id, tech_id))
 
       # Apply bonuses
       cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
@@ -429,7 +429,7 @@ def complete_research(discord_id, tech_id):
         bonus_pair = list(bonus)
 
         cursor.execute(
-          "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values ("
+          "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) values ("
           "?,?,?,?,?)",
           (discord_id, bonus_pair[0], bonus_pair[1], -1, -1))
       return True
@@ -484,21 +484,21 @@ def attempt_conversion(player_discord, quantity, person_type, other_player_disco
         with connect() as cursor:
           if person_type == "enemy_priest":
             cursor.execute(
-                "INSERT INTO player_attributes (player_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
+                "INSERT INTO player_attributes (discord_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
                 "?,?,?,?,?)",
                 (other_player_discord, Attributes.PRIESTS, -1 * converts, -1, -1))
           elif person_type == "enemy":
             cursor.execute(
-                "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                 "?,?,?,?,?)",
                 (other_player_discord, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
             cursor.execute(
-                "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                 "?,?,?,?,?)",
                 (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
           elif person_type == "neutral":
             cursor.execute(
-                "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                 "?,?,?,?,?)",
                 (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
           else:
@@ -532,6 +532,7 @@ def get_pantheon(discord_id):
 
 def attack(discord_id, other_player_id, quantity):
   available_attackers = get_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
+  print(available_attackers)
   if quantity <= available_attackers:
     attackers = quantity
     attack_armor = get_attribute(discord_id, Attributes.ARMOR)
