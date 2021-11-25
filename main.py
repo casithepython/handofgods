@@ -447,7 +447,7 @@ def new_turn():
 # Conversion
 # ----------------------------------------
 def attempt_conversion(player_discord, quantity, person_type, other_player_discord=None):
-  if person_type is not "neutral" or other_player_discord is None and person_type is "neutral":
+  if person_type != "neutral" or (other_player_discord is None and person_type == "neutral"):
     if get_pantheon(player_discord) is None or get_pantheon(other_player_discord) is None or get_pantheon(player_discord) is not get_pantheon(other_player_discord):
       if person_type == "enemy":
         if quantity <= get_attribute(other_player_discord, Attributes.FUNCTIONARIES):
