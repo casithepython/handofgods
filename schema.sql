@@ -25,8 +25,12 @@ CREATE TABLE player_attributes(
     value FLOAT,
     start_turn INTEGER DEFAULT -1,
     expiry_turn INTEGER DEFAULT -1
-    );
-
+);
+CREATE TABLE player_technologies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER,
+    technology_id INTEGER
+);
 CREATE TABLE attributes(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255)
