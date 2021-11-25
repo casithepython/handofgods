@@ -304,6 +304,8 @@ def get_player_techs(player_id):
 # Research
 # ----------------------------------------
 def attempt_research(player_id, tech_id, method):
+    if not technology_exists(tech_id):
+        return False, "technology does not exist"
     if tech_id not in get_player_techs(player_id):
         if method == "divine_inspiration":
             attribute_rate = get_attribute(player_id, 6)
@@ -345,7 +347,14 @@ def player_has_technology(player_id, technology_id):
         cursor.execute("SELECT 1 FROM player_technologies WHERE player_id = ? AND technology_id = ?", (player_id, technology_id))
         return cursor.fetchone() is not None
 
+def technology_exists(technology_id):
+    with transaction() as cursor:
+        cursor.execute("SELECT 1 FROM technologies WHERE id = ?", (technology_id,))
+        return cursor.fetchone() is not None
+
 def complete_research(player_id, tech_id):
+    if not technology_exists(tech_id):
+        return False
     if not player_has_technology(player_id, tech_id):
         with transaction() as cursor:
             cursor.execute("INSERT INTO player_technologies (player_id, technology_id) VALUES (?, ?)", (player_id, tech_id))
