@@ -221,9 +221,9 @@ def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
         bonuses = []
     if name not in list(map(lambda a: a.lower(), get_tech_names())):
         with transaction() as cursor:
-            cursor.execute("INSERT INTO tech (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
+            cursor.execute("INSERT INTO technologies (name,description,cost,chance_multiplier) VALUES (?,?,?,?)",
                         (name, description, cost, chance_multiplier))
-            cursor.execute("SELECT id FROM tech WHERE name = ?", (name,))
+            cursor.execute("SELECT id FROM technologies WHERE name = ?", (name,))
             tech_id = cursor.fetchone()[0]
             for bonus in bonuses:
                 cursor.execute("INSERT INTO tech_bonuses (tech_id,attribute_id,value) VALUES (?,?,?)",
@@ -264,7 +264,7 @@ def update_tech_bonus(tech_id, attribute_id, value):
 def get_tech_id(name):
     tech_id = None
     with transaction() as cursor:
-        cursor.execute("SELECT id from tech WHERE LOWER(id) = ?", (name.lower(),))
+        cursor.execute("SELECT id FROM technologies WHERE LOWER(id) = ?", (name.lower(),))
         tech_id = cursor.fetchone()[0]
     return tech_id
 
@@ -272,7 +272,7 @@ def get_tech_id(name):
 def get_tech_cost(tech_id):
     cost = None
     with transaction() as cursor:
-        cursor.execute("SELECT cost from tech WHERE id = ?", (tech_id,))
+        cursor.execute("SELECT cost from technologies WHERE id = ?", (tech_id,))
         cost = cursor.fetchone()[0]
     return cost
 
@@ -280,14 +280,14 @@ def get_tech_cost(tech_id):
 def get_tech_names():
     names = []
     with transaction() as cursor:
-        names = [name[0] for name in cursor.execute("SELECT name FROM tech")]
+        names = [name[0] for name in cursor.execute("SELECT name FROM technologies")]
     return names
 
 
 def get_tech_chance_multiplier(tech_id):
     multiplier = None
     with transaction() as cursor:
-        cursor.execute("SELECT chance_multiplier from tech WHERE id = ?", (tech_id,))
+        cursor.execute("SELECT chance_multiplier FROM technologies WHERE id = ?", (tech_id,))
         multiplier = cursor.fetchone()[0]
     return multiplier
 
@@ -296,7 +296,9 @@ def get_player_tech(player_id):
     tech = []
     with transaction() as cursor:
         cursor.execute("SELECT tech FROM players WHERE id = ?", (player_id,))
-        tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
+        tech_arr = cursor.fetchall()
+        if len(tech_arr) > 0 and len(tech_arr[0]) > 0:
+            tech = json.loads(cursor.fetchall()[0][0])  # Pluck out the JSON with indexes and convert to list
     return tech
 
 
