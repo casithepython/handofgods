@@ -83,7 +83,7 @@ async def research(ctx, *, tech_name):
 
 
 @bot.command()
-async def battle(ctx, player_name, quantity):
+async def battle(ctx, *, player_name, quantity):
     player_discord = ctx.author.id
     other_player_discord = db.get_user_by_name(player_name)
 
@@ -212,7 +212,7 @@ async def convert(ctx,quantity):
                 if reaction != emoji:
                     await message.remove_reaction(reaction, ctx.me)
 
-            if reactions[emoji] is "neutral":
+            if reactions[emoji] == "neutral":
                 results = db.attempt_conversion(player_discord=player_discord,
                                                 quantity=quantity,
                                                 person_type=reactions[emoji],
@@ -224,7 +224,8 @@ async def convert(ctx,quantity):
                 else:
                   result_text = "This error should not exist."
                 await ctx.send(result_text)
-            else:
+                return
+            elif reactions[emoji] in ["enemy","enemy_priest"]:
                 await ctx.send("Please specify the player to attempt to convert away from. \n"
                                "Avoid unnecessary whitespaces or characters.")
                 other_player_name, _ = await bot.wait_for('message',timeout=30.0,check=check_message_author(ctx.author))
@@ -239,6 +240,11 @@ async def convert(ctx,quantity):
                 else:
                   result_text = "This error should not exist."
                 await ctx.send(result_text)
+                return
+            else:
+                result_text = "This should never happen"
+                await ctx.send(result_text)
+                return
         except TimeoutError:
             ctx.send("Timed out")
 
