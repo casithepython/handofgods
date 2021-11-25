@@ -76,7 +76,8 @@ attributes = [
     "attacks_per_turn",
     "functionary_armor",
     "functionary_defense",
-    "total_priest_power"
+    "total_priest_power",
+    "priest_income_boost_rate"
 ]
 for attribute in attributes:
     cursor.execute('INSERT INTO attributes (name) VALUES (?)', (attribute,))

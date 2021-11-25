@@ -60,6 +60,8 @@ class Attributes:
     FUNCTIONARY_ARMOR = 48
     FUNCTIONARY_DEFENSE = 49
     TOTAL_PRIEST_POWER = 50
+    PRIEST_INCOME_BOOST_RATE = 51
+
 
 class connect:
     def __init__(self):
@@ -74,10 +76,6 @@ class connect:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.__connection.commit()
         self.__connection.close()
-
-
-# TODO: Pantheons
-# TODO: new turn function
 
 
 # ----------------------------------------
@@ -162,7 +160,8 @@ def new_user(name, discord_id):
                 Attributes.FUNCTIONARY_ARMOR: 0,
                 Attributes.FUNCTIONARY_DEFENSE: 0,
                 Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0,
-                Attributes.TOTAL_PRIEST_POWER: 0
+                Attributes.TOTAL_PRIEST_POWER: 0,
+                Attributes.PRIEST_INCOME_BOOST_RATE: 5
             }
             for attribute_id, value in defaults.items:
                 cursor.execute(
@@ -218,25 +217,33 @@ def get_power(discord_id):
     return get_attribute(discord_id, Attributes.POWER)
 
 
+def give_power(discord_id, power):
+    with connect() as cursor:
+        cursor.execute(
+            "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
+            (discord_id, Attributes.POWER, power, -1, -1))
+
+
 def spend_power(discord_id, power):
     player_power = get_power(discord_id)
     if power <= player_power:
         with connect() as cursor:
             cursor.execute(
                 "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
-                (discord_id, 35, -power, -1, -1))
+                (discord_id, Attributes.POWER, -power, -1, -1))
         return True
     else:
         return False
 
 
-def has_sufficient_channeling_power(discord_id,amount):
-  return amount <= get_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER)
+def has_sufficient_channeling_power(discord_id, amount):
+    return amount <= get_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER)
 
 
+def spend_channeling_power(discord_id, amount):
+    insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, -1 * amount, -1, -1)
 
-def spend_channeling_power(discord_id,amount):
-  insert_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER,-1*amount,-1,-1)
+
 # ----------------------------------------
 # Attributes
 # ----------------------------------------
@@ -432,19 +439,19 @@ def attempt_research(discord_id, tech_id, method, priest=False):
 
         priest_used = False
         if priest:
-          if has_sufficient_channeling_power(discord_id,attempt_cost+success_cost):
-            attribute_rate += get_attribute(discord_id, Attributes.PRIEST_RESEARCH_BONUS)
-            priest_used = True
+            if has_sufficient_channeling_power(discord_id, attempt_cost + success_cost):
+                attribute_rate += get_attribute(discord_id, Attributes.PRIEST_RESEARCH_BONUS)
+                priest_used = True
 
         if get_power(discord_id) >= attempt_cost + success_cost:
             spend_power(discord_id, attempt_cost)
             if priest_used:
-              spend_channeling_power(discord_id,attempt_cost)
+                spend_channeling_power(discord_id, attempt_cost)
             if random.random() <= attribute_rate:
                 complete_research(discord_id, tech_id)
                 spend_power(discord_id, success_cost)
                 if priest_used:
-                  spend_channeling_power(discord_id, success_cost)
+                    spend_channeling_power(discord_id, success_cost)
                 return True, "Successfully researched " + get_tech_name(tech_id) + "."
             else:
                 return False, "Failed research chance, " + str(attempt_cost) + " DP spent."
@@ -502,11 +509,49 @@ def current_turn():
 
 
 def new_turn():
-    pass
-    # Check for and add income
-    # Reset army counter
-    # Check for pantheon acceptance
-    # TODO
+    # Increase turn counter
+    with connect() as cursor:
+        cursor.execute("UPDATE system_variables SET value = ? WHERE name = ?", (current_turn() + 1, "turn"))
+
+
+    for discord_id in get_discord_ids():
+        # Grow population
+        insert_attribute(discord_id,
+                         Attributes.FUNCTIONARIES,
+                         get_attribute(discord_id,Attributes.FUNCTIONARIES)*get_attribute(discord_id,Attributes.PASSIVE_POPULATION_GROWTH_RATE),
+                         -1,
+                         -1
+                         )
+
+
+        # Check for and add income
+        # Population bonus power
+        population_bonus_power = get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL) + get_attribute(
+            discord_id, Attributes.BONUS_POWER_PER_SOLDIER) + get_attribute(discord_id,
+                                                                            Attributes.BONUS_POWER_PER_PRIEST)
+        boost_capacity_priest = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_CAPACITY)
+        boost_capacity = get_attribute(discord_id, Attributes.PRIESTS) * boost_capacity_priest
+        income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power,boost_capacity)
+
+        # Base income
+        base_income = \
+            get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id,
+                                                                                Attributes.INCOME_PER_FUNCTIONAL) + \
+            get_attribute(discord_id, Attributes.SOLDIERS) * get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER) + \
+            get_attribute(discord_id, Attributes.PRIESTS) * get_attribute(discord_id, Attributes.INCOME_PER_PRIEST)
+
+        # Reset attack army counter
+        attackers_to_add = get_attribute(discord_id,Attributes.SOLDIERS) - get_attribute(discord_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS)
+        insert_attribute(discord_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS,attackers_to_add,-1,-1)
+
+        # Reset priest channeling
+        priests = get_attribute(discord_id,Attributes.PRIESTS)
+        channeling_to_add = (priests * get_attribute(discord_id,Attributes.MAXIMUM_PRIEST_CHANNELING)) \
+                            - get_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER)
+        insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, channeling_to_add, -1, -1)
+
+
+
 
 
 # ----------------------------------------
@@ -534,35 +579,35 @@ def attempt_conversion(player_discord, quantity, person_type, other_player_disco
             else:
                 return False, "Invalid type"
             if attempt_cost * quantity <= get_power(player_discord):
-              if attempt_cost * quantity <= get_attribute(player_discord,Attributes.TOTAL_PRIEST_POWER):
-                  spend_power(player_discord, attempt_cost * quantity)
-                  spend_channeling_power(player_discord,attempt_cost*quantity)
-                  converts = calculate_converts(quantity, conversion_rate)
-                  with connect() as cursor:
-                      if person_type == "enemy_priest":
-                          cursor.execute(
-                              "INSERT INTO player_attributes (discord_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
-                              "?,?,?,?,?)",
-                              (other_player_discord, Attributes.PRIESTS, -1 * converts, -1, -1))
-                      elif person_type == "enemy":
-                          cursor.execute(
-                              "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                              "?,?,?,?,?)",
-                              (other_player_discord, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
-                          cursor.execute(
-                              "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                              "?,?,?,?,?)",
-                              (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
-                      elif person_type == "neutral":
-                          cursor.execute(
-                              "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
-                              "?,?,?,?,?)",
-                              (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
-                      else:
-                          return False, "Something went wrong that should never go wrong. Congratulations, you broke my system."
-                      return True, [converts, attempt_cost * quantity]
-              else:
-                return False, "Insufficient priest channeling power."
+                if attempt_cost * quantity <= get_attribute(player_discord, Attributes.TOTAL_PRIEST_POWER):
+                    spend_power(player_discord, attempt_cost * quantity)
+                    spend_channeling_power(player_discord, attempt_cost * quantity)
+                    converts = calculate_converts(quantity, conversion_rate)
+                    with connect() as cursor:
+                        if person_type == "enemy_priest":
+                            cursor.execute(
+                                "INSERT INTO player_attributes (discord_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
+                                "?,?,?,?,?)",
+                                (other_player_discord, Attributes.PRIESTS, -1 * converts, -1, -1))
+                        elif person_type == "enemy":
+                            cursor.execute(
+                                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                                "?,?,?,?,?)",
+                                (other_player_discord, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
+                            cursor.execute(
+                                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                                "?,?,?,?,?)",
+                                (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                        elif person_type == "neutral":
+                            cursor.execute(
+                                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                                "?,?,?,?,?)",
+                                (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                        else:
+                            return False, "Something went wrong that should never go wrong. Congratulations, you broke my system."
+                        return True, [converts, attempt_cost * quantity]
+                else:
+                    return False, "Insufficient priest channeling power."
             else:
                 return False, "Insufficient DP."
         else:
@@ -582,6 +627,15 @@ def calculate_converts(quantity, chance):
 # ----------------------------------------
 # Pantheons
 # ----------------------------------------
+# TODO - construct pantheons
+# Pantheon mechanics include:
+# getting approval from all players
+# adding players to pantheons
+# Combined military forces
+# Conversion immunity DONE
+# Bonus sharing
+# Can't attack until a turn after you leave a pantheon
+
 def get_pantheon(discord_id):
     pantheon = None
     with connect() as cursor:
@@ -599,7 +653,7 @@ def attack(discord_id, other_player_id, quantity):
     available_attackers = get_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
     if get_attribute(other_player_id, Attributes.SOLDIERS) + get_attribute(other_player_id,
                                                                            Attributes.FUNCTIONARIES) + get_attribute(
-            other_player_id, Attributes.PRIESTS) > 0:
+        other_player_id, Attributes.PRIESTS) > 0:
         if quantity != 0:
             if quantity <= available_attackers:
                 attackers = quantity
