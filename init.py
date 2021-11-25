@@ -74,8 +74,8 @@ attributes = [
 
     "attack_eligible_soldiers",
     "attacks_per_turn",
-    "population_armor",
-    "population_defense"
+    "functionary_armor",
+    "functionary_defense"
 ]
 for attribute in attributes:
     cursor.execute('INSERT INTO attributes (name) VALUES (?)', (attribute,))

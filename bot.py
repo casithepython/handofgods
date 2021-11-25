@@ -136,27 +136,34 @@ async def battle(ctx, player_name:str, quantity:int):
 
             if reactions[emoji]:
                 results = db.attack(player_discord, other_player_discord, quantity)
-                remaining_attackers = db.get_attribute(player_discord, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-                remaining_soldiers = db.get_attribute(player_discord, Attributes.SOLDIERS)
-                remaining_enemy_soldiers = db.get_attribute(other_player_discord, Attributes.SOLDIERS)
+                if results[0]:
+                    remaining_attackers = db.get_attribute(player_discord, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
+                    remaining_soldiers = db.get_attribute(player_discord, Attributes.SOLDIERS)
+                    remaining_enemy_soldiers = db.get_attribute(other_player_discord, Attributes.SOLDIERS)
 
-                result_text = "**Battle results**:\n" \
-                              "Soldiers killed: *{soldiers_killed}*\n" \
-                              "Functionaries killed: *{functionaries_killed}*\n" \
-                              "Priests killed: *{priests_killed}*\n" \
-                              "Enemy troops remaining: *{enemy_troops_remaining}*\n\n" \
-                              "Soldiers lost: *{soldiers_lost}*\n" \
-                              "Soldiers remaining: *{soldiers_remaining}*\n" \
-                              "Attackers remaining: *{attackers_remaining}*".format(
-                    soldiers_killed=results[0][0], functionaries_killed=results[0][1],
-                    priests_killed=results[0][2], enemy_troops_remaining=remaining_enemy_soldiers,
-                    soldiers_lost=results[1], soldiers_remaining=remaining_soldiers,
-                    attackers_remaining=remaining_attackers
-                )
-                await ctx.send(result_text)
-                return
+                    result_text = "**Battle results**:\n" \
+                                  "Soldiers killed: *{soldiers_killed}*\n" \
+                                  "Functionaries killed: *{functionaries_killed}*\n" \
+                                  "Priests killed: *{priests_killed}*\n" \
+                                  "Enemy troops remaining: *{enemy_troops_remaining}*\n\n" \
+                                  "Soldiers lost: *{soldiers_lost}*\n" \
+                                  "Soldiers remaining: *{soldiers_remaining}*\n" \
+                                  "Attackers remaining: *{attackers_remaining}*".format(
+                        soldiers_killed=results[1][0][0], functionaries_killed=results[1][0][1],
+                        priests_killed=results[1][0][2], enemy_troops_remaining=remaining_enemy_soldiers,
+                        soldiers_lost=results[1][1], soldiers_remaining=remaining_soldiers,
+                        attackers_remaining=remaining_attackers
+                    )
+                    await ctx.send(result_text)
+                    return
+                elif not results[0]:
+                    await ctx.send(results[1])
+                    return
+                else:
+                    await ctx.send("This should not happen")
+                    return
             else:
-                await ctx.send("Conversion canceled.")
+                await ctx.send("Battle canceled.")
                 return
         except TimeoutError:
             ctx.send("Timed out")

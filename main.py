@@ -56,8 +56,8 @@ class Attributes:
   BONUS_POWER_PER_PRIEST = 45
   ATTACK_ELIGIBLE_SOLDIERS = 46
   ATTACKS_PER_TURN = 47
-  POPULATION_ARMOR = 48
-  POPULATION_DEFENSE = 49
+  FUNCTIONARY_ARMOR = 48
+  FUNCTIONARY_DEFENSE = 49
 
 class connect:
   def __init__(self):
@@ -152,8 +152,8 @@ def new_user(name, discord_id):
         Attributes.BONUS_POWER_PER_SOLDIER: 0,
         Attributes.BONUS_POWER_PER_PRIEST: 0,
         Attributes.ATTACKS_PER_TURN: 1,
-        Attributes.POPULATION_ARMOR: 0,
-        Attributes.POPULATION_DEFENSE: 0,
+        Attributes.FUNCTIONARY_ARMOR: 0,
+        Attributes.FUNCTIONARY_DEFENSE: 0,
         Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0
       }
       for attribute_id, value in defaults.items:
@@ -531,43 +531,48 @@ def get_pantheon(discord_id):
 # ----------------------------------------
 
 def attack(discord_id, other_player_id, quantity):
+  quantity = int(quantity)
   available_attackers = get_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-  print(available_attackers)
-  if quantity <= available_attackers:
-    attackers = quantity
-    attack_armor = get_attribute(discord_id, Attributes.ARMOR)
-    attack_value = get_attribute(discord_id, Attributes.ATTACK)
+  if get_attribute(other_player_id, Attributes.SOLDIERS) + get_attribute(other_player_id,Attributes.FUNCTIONARIES) + get_attribute(other_player_id,Attributes.PRIESTS) > 0:
+    if quantity != 0:
+      if quantity <= available_attackers:
+        attackers = quantity
+        attack_armor = get_attribute(discord_id, Attributes.ARMOR)
+        attack_value = get_attribute(discord_id, Attributes.ATTACK)
 
-    defenders = get_attribute(other_player_id,Attributes.SOLDIERS)
-    defense_armor = get_attribute(other_player_id,Attributes.ARMOR)
-    defense_value = get_attribute(other_player_id,Attributes.DEFENSE)
+        defenders = get_attribute(other_player_id,Attributes.SOLDIERS)
+        defense_armor = get_attribute(other_player_id,Attributes.ARMOR)
+        defense_value = get_attribute(other_player_id,Attributes.DEFENSE)
 
-    attack_damage = generate_damage(attackers,attack_value)
-    attackers_loss = math.floor(attack_damage /
-                        attack_armor)
+        attack_damage = generate_damage(attackers,attack_value)
+        attackers_loss = math.floor(attack_damage /
+                            attack_armor)
+        defense_damage = generate_damage(defenders,defense_value)
+        defenders_loss = math.floor(defense_damage /
+                            defense_armor)
 
-    defense_damage = generate_damage(defenders,defense_value)
-    defenders_loss = math.floor(defense_damage /
-                        defense_armor)
-
-    deal_defense_damage(discord_id,attackers_loss)
-    deal_attack_damage(other_player_id,defenders_loss)
+        damage_received = deal_defense_damage(discord_id,defense_damage)
+        damage_dealt = deal_attack_damage(other_player_id,attack_damage)
 
 
-    # If some of the attackers die, then they're all ineligible anyway
-    # If all of them die, they're all ineligible
-    # So we just remove attackers
-    attackers_made_ineligible = attackers
+        # If some of the attackers die, then they're all ineligible anyway
+        # If all of them die, they're all ineligible
+        # So we just remove attackers
+        attackers_made_ineligible = attackers
 
-    # This won't expire, because we have to hard reset it at the beginning of every turn anyway
-    insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -1 * attackers_made_ineligible,-1,-1)
+        # This won't expire, because we have to hard reset it at the beginning of every turn anyway
+        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -1 * attackers_made_ineligible,-1,-1)
+        return True, [damage_dealt[1],damage_received]
+      else:
+        return False, "Insufficient attackers available"
+    else:
+      return False, "Must attack with some units."
   else:
-    return False, "Insufficient attackers available"
-
+    return False, "The opponent has nothing left to kill!"
 
 def generate_damage(quantity,limit):
   total = 0
-  for attack in range(quantity):
+  for attack in range(int(quantity)):
     total += random.randint(0,limit)
   return total
 
@@ -577,44 +582,60 @@ def expected_damage(player_discord,other_player_discord,quantity):
 
 
 def deal_attack_damage(discord_id,damage):
-  remaining_damage = math.floor(damage)
+  remaining_damage = damage
   available_defenders = get_attribute(discord_id,Attributes.SOLDIERS)
   available_functionaries = get_attribute(discord_id, Attributes.FUNCTIONARIES)
   available_priests = get_attribute(discord_id, Attributes.PRIESTS)
 
-  defender_armor = get_attribute(discord_id, Attributes.ARMOR)
+  defenders_killed=0
+  functionaries_killed = 0
+  priests_killed = 0
 
-  defenders_killed = int(remaining_damage / defender_armor)
-  remaining_damage -= available_defenders * defender_armor
-  if defenders_killed > 0:
-    kill(discord_id, defenders_killed, "soldiers")
+  if remaining_damage > 0:
+    defender_armor = get_attribute(discord_id, Attributes.ARMOR)
+
+    # Killed is damage divided by armor
+    defenders_killed = int(remaining_damage / defender_armor)
+
+    # Subtract away the damage dealt
+    remaining_damage -= available_defenders * defender_armor
+    if defenders_killed > 0:
+      if defenders_killed > available_defenders:
+        defenders_killed=available_defenders
+      kill(discord_id, defenders_killed, "soldiers")
   
   if remaining_damage > 0:
-    functionary_armor = get_attribute(discord_id, Attributes.FUCTIONARY_ARMOR)
+    functionary_armor = get_attribute(discord_id, Attributes.FUNCTIONARY_ARMOR)
     functionaries_killed = int(remaining_damage / functionary_armor)
     remaining_damage -= available_functionaries * functionary_armor
     if functionaries_killed > 0:
+      if functionaries_killed > available_functionaries:
+        functionaries_killed=available_functionaries
       kill(discord_id, functionaries_killed, "functionaries")
 
   if remaining_damage > 0:
-    priest_armor = get_attribute(discord_id, Attributes.FUCTIONARY_ARMOR)
+    priest_armor = get_attribute(discord_id, Attributes.FUNCTIONARY_ARMOR)
     priests_killed = int(remaining_damage / priest_armor)
     remaining_damage -= available_priests * priest_armor
     if priests_killed > 0:
-      kill(discord_id, priests_killed, "priests")
+      if priests_killed > available_priests:
+        priests_killed = available_priests
+      kill(discord_id,priests_killed,"priests")
 
-  if remaining_damage > 0:
-    return False
-
-  return True
+  return True, [defenders_killed,functionaries_killed,priests_killed]
 
 
 def deal_defense_damage(discord_id,damage):
   soldiers = get_attribute(discord_id, Attributes.SOLDIERS)
+  soldiers_killed = 0
+  damage = int(damage)
   if soldiers >= damage:
+    soldiers_killed = damage
     kill(discord_id,damage,"soldiers")
   else:
+    soldiers_killed = soldiers
     kill(discord_id,soldiers,"soldiers")
+  return soldiers_killed
 
 
 def kill(discord_id,quantity,type):
