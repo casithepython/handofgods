@@ -282,6 +282,8 @@ def insert_attribute(discord_id, attribute_id, value, start_turn, expiry_turn):
                        "VALUES (?,?,?,?,?)",
                        (discord_id, attribute_id, value, start_turn, expiry_turn))
 
+def increase_attribute(discord_id, attribute_id, value, expiry_turn):
+    insert_attribute(discord_id, attribute_id, value, current_turn(), expiry_turn)
 
 def get_attribute(discord_id, attribute_id):
     value = None
@@ -310,6 +312,11 @@ def get_num_attributes():
 
         num = len(cursor.fetchall())
     return num
+
+def attribute_exists(attribute_id):
+    with connect() as cursor:
+        cursor.execute("SELECT 1 FROM attributes WHERE id = ?", (attribute_id,))
+        return cursor.fetchone() is not None
 # ----------------------------------------
 # Tech
 # ----------------------------------------
@@ -692,6 +699,36 @@ def get_pantheon_name(pantheon_id):
 # ----------------------------------------
 # Battles
 # ----------------------------------------
+
+def cast_buff(discord_id, attribute_id, amount):
+    # Phase 1: Assertions
+    if attribute_id not in {Attributes.ATTACK, Attributes.DEFENSE, Attributes.ARMOR, Attributes.INITIATIVE}:
+        return None
+    if not user_discord_id_exists(discord_id):
+        return None
+    if not attribute_exists(attribute_id):
+        return None
+
+    # Phase 2: Calculate cost
+    casting_cost = 0
+    buffed_amount = get_attribute(discord_id, Attributes.DP_BUFF_POINTS)
+    soldier_count = get_attribute(discord_id, Attributes.SOLDIERS)
+    buff_cost_multiplier = get_attribute(discord_id, Attributes.DP_BUFF_COST_MULTIPLIER)
+    for i in range(amount):
+        casting_cost += 2 ** buffed_amount
+        buffed_amount += 1
+    
+    casting_cost = int(casting_cost * soldier_count * buff_cost_multiplier)
+
+    if get_power(discord_id) < casting_cost:
+        return False # Not enough power
+
+    # Phase 3: Increase cost and spend DP
+    turn = current_turn()
+    spend_power(discord_id, casting_cost)
+    increase_attribute(discord_id, Attributes.DP_BUFF_POINTS, amount, turn)
+    increase_attribute(discord_id, attribute_id, amount, turn)
+    return True # Enough power
 
 def attack(discord_id, other_player_id, quantity):
     quantity = int(quantity)
