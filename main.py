@@ -248,15 +248,10 @@ def give_power(discord_id, power):
             "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
             (discord_id, Attributes.POWER, power, -1, -1))
 
-
 def spend_power(discord_id, power):
     player_power = get_power(discord_id)
     if power <= player_power:
-        with connect() as cursor:
-            cursor.execute(
-                "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,"
-                "?,?)",
-                (discord_id, Attributes.POWER, -power, -1, -1))
+        give_power(discord_id, -power)
         return True
     else:
         return False
