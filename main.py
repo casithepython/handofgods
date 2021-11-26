@@ -114,9 +114,8 @@ def new_user(name, discord_id):
                 Attributes.ATTACK: 0,
                 Attributes.DEFENSE: 0,
                 Attributes.INITIATIVE: 0,
-                Attributes.ARMOR: 0,
-                Attributes.ARMOUR: 1,
-                Attributes.RESEARCH_COST_MULTIPLIER: 0.05,
+                Attributes.ARMOR: 1,
+                Attributes.RESEARCH_COST_MULTIPLIER: 1,
                 Attributes.DIVINE_INSPIRATION_RATE: 0.05,
                 Attributes.DIVINE_INSPIRATION_COST: 2,
                 Attributes.AWAKE_REVELATION_RATE: 0.2,
@@ -125,27 +124,27 @@ def new_user(name, discord_id):
                 Attributes.ASLEEP_REVELATION_COST: 5,
                 Attributes.DIVINE_AVATAR_RATE: 1,
                 Attributes.DIVINE_AVATAR_COST: 20,
-                Attributes.PRIEST_RESEARCH_BONUS: 0.13,
-                Attributes.PASSIVE_POPULATION_GROWTH_RATE: 1,
-                Attributes.INCOME_PER_FUNCTIONAL: 0,
+                Attributes.PRIEST_RESEARCH_BONUS: 0.3,
+                Attributes.PASSIVE_POPULATION_GROWTH_RATE: 0.13,
+                Attributes.INCOME_PER_FUNCTIONAL: 1,
                 Attributes.INCOME_PER_SOLDIER: 0,
-                Attributes.INCOME_PER_PRIEST: 1,
-                Attributes.BONUS_POWER_PER_FUNCTIONAL: 5,
-                Attributes.PRIEST_INCOME_BOOST_CAPACITY: 0.1,
+                Attributes.INCOME_PER_PRIEST: 0,
+                Attributes.BONUS_POWER_PER_FUNCTIONAL: 1,
+                Attributes.PRIEST_INCOME_BOOST_CAPACITY: 5,
                 Attributes.ENEMY_CONVERSION_RATE: 0.1,
                 Attributes.ENEMY_CONVERSION_COST: 2,
                 Attributes.NEUTRAL_CONVERSION_RATE: 0.2,
                 Attributes.NEUTRAL_CONVERSION_COST: 1,
                 Attributes.ENEMY_PRIEST_CONVERSION_RATE: 0.05,
-                Attributes.ENEMY_PRIEST_CONVERSION_COST: 100,
-                Attributes.PANTHEON_BONUS_MULTIPLIER: 200,
+                Attributes.ENEMY_PRIEST_CONVERSION_COST: 50,
+                Attributes.PANTHEON_BONUS_MULTIPLIER: 0.5,
                 Attributes.MAXIMUM_PRIEST_CHANNELING: 10,
                 Attributes.PRIEST_COST: 0,
                 Attributes.SOLDIER_COST: 0,
                 Attributes.SOLDIER_DISBAND_COST: 0,
                 Attributes.PRIESTS: 0,
-                Attributes.SOLDIERS: 1000,
-                Attributes.FUNCTIONARIES: 0,
+                Attributes.SOLDIERS: 0,
+                Attributes.FUNCTIONARIES: 1000,
                 Attributes.POWER: 0,
                 Attributes.TOTAL_CONVERTED: 0,
                 Attributes.TOTAL_POACHED: 0,
@@ -163,13 +162,13 @@ def new_user(name, discord_id):
                 Attributes.TOTAL_PRIEST_POWER: 0,
                 Attributes.PRIEST_INCOME_BOOST_RATE: 5
             }
-            for attribute_id, value in defaults.items:
+            for attribute_id, value in defaults.items():
                 cursor.execute(
                     "INSERT INTO player_attributes (discord_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
                     (discord_id, attribute_id, value, -1))
-        return True
+        return True, "Successfully added user " + name
     else:
-        return False
+        return False, "User or discord id already in system."
 
 
 def get_player_id(discord_id):
@@ -229,7 +228,8 @@ def spend_power(discord_id, power):
     if power <= player_power:
         with connect() as cursor:
             cursor.execute(
-                "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
+                "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,"
+                "?,?)",
                 (discord_id, Attributes.POWER, -power, -1, -1))
         return True
     else:
@@ -283,9 +283,9 @@ def tech_name_exists(name):
         return cursor.fetchone() is not None
 
 
-def tech_exists(id):
+def tech_exists(tech_id):
     with connect() as cursor:
-        cursor.execute("SELECT 1 FROM technologies WHERE id = ?", (id,))
+        cursor.execute("SELECT 1 FROM technologies WHERE id = ?", (tech_id,))
         return cursor.fetchone() is not None
 
 
@@ -513,16 +513,15 @@ def new_turn():
     with connect() as cursor:
         cursor.execute("UPDATE system_variables SET value = ? WHERE name = ?", (current_turn() + 1, "turn"))
 
-
     for discord_id in get_discord_ids():
         # Grow population
         insert_attribute(discord_id,
                          Attributes.FUNCTIONARIES,
-                         get_attribute(discord_id,Attributes.FUNCTIONARIES)*get_attribute(discord_id,Attributes.PASSIVE_POPULATION_GROWTH_RATE),
+                         get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id,
+                                                                                             Attributes.PASSIVE_POPULATION_GROWTH_RATE),
                          -1,
                          -1
                          )
-
 
         # Check for and add income
         # Population bonus power
@@ -531,7 +530,8 @@ def new_turn():
                                                                             Attributes.BONUS_POWER_PER_PRIEST)
         boost_capacity_priest = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_CAPACITY)
         boost_capacity = get_attribute(discord_id, Attributes.PRIESTS) * boost_capacity_priest
-        income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power,boost_capacity)
+        income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power,
+                                                                                            boost_capacity)
 
         # Base income
         base_income = \
@@ -541,17 +541,15 @@ def new_turn():
             get_attribute(discord_id, Attributes.PRIESTS) * get_attribute(discord_id, Attributes.INCOME_PER_PRIEST)
 
         # Reset attack army counter
-        attackers_to_add = get_attribute(discord_id,Attributes.SOLDIERS) - get_attribute(discord_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-        insert_attribute(discord_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS,attackers_to_add,-1,-1)
+        attackers_to_add = get_attribute(discord_id, Attributes.SOLDIERS) - get_attribute(discord_id,
+                                                                                          Attributes.ATTACK_ELIGIBLE_SOLDIERS)
+        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, attackers_to_add, -1, -1)
 
         # Reset priest channeling
-        priests = get_attribute(discord_id,Attributes.PRIESTS)
-        channeling_to_add = (priests * get_attribute(discord_id,Attributes.MAXIMUM_PRIEST_CHANNELING)) \
-                            - get_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER)
+        priests = get_attribute(discord_id, Attributes.PRIESTS)
+        channeling_to_add = (priests * get_attribute(discord_id, Attributes.MAXIMUM_PRIEST_CHANNELING)) \
+                            - get_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER)
         insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, channeling_to_add, -1, -1)
-
-
-
 
 
 # ----------------------------------------

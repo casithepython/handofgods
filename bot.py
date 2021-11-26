@@ -13,6 +13,11 @@ research_cache = {}
 
 bot = commands.Bot(command_prefix="?")
 
+@bot.command()
+async def join(ctx,name:str):
+    result = db.new_user(name,ctx.author.id)
+    await ctx.send(result[1])
+    return
 
 @bot.command()
 async def research(ctx, *, tech_name):
