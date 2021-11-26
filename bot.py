@@ -263,7 +263,7 @@ async def convert(ctx, quantity: int):
                                             other_player_discord=None)
             if results[0]:
                 result_text = "Successfully converted {converts}.".format(converts=results[1])
-            else not results[0]:
+            else:
                 result_text = results[1]
             await ctx.send(result_text)
             return
