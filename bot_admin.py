@@ -86,7 +86,7 @@ async def user_delete(bot, ctx, *args):
         await ctx.send('User does not exist')
         return
 
-    output_text = 'Are you sure you want to delete the user "{}"?\n :regional_indicator_y: Yes / :regional_indicator_n: No'
+    output_text = 'Are you sure you want to delete the user "{}"?\n :regional_indicator_y: Yes / :regional_indicator_n: No'.format(user_name)
     should_delete = await user_react_on_message(bot, ctx, output_text, ctx.author, {
         '\N{REGIONAL INDICATOR SYMBOL LETTER Y}': True,
         '\N{REGIONAL INDICATOR SYMBOL LETTER N}': False
