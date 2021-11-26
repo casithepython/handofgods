@@ -291,7 +291,7 @@ def get_attribute(discord_id, attribute_id):
     with connect() as cursor:
         cursor.execute(
             "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
-            "expiry_turn>?) AND start_turn<=?",
+            "expiry_turn >= ?) AND start_turn<=?",
             (discord_id, attribute_id, turn, turn))
         value = cursor.fetchone()[0]
     return value
