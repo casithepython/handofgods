@@ -6,6 +6,7 @@ from main import Attributes
 import main as db
 import math
 from typing import Optional
+import HelpfileReader
 # import testdb as db
 
 debug_mode = True
@@ -14,6 +15,7 @@ research_cache = {}
 PREFIX = "?"
 bot = commands.Bot(command_prefix=PREFIX)
 
+bot.help_command = None
 
 @bot.command()
 async def join(ctx, name: str, *, must_be_none: Optional[str]):
@@ -502,8 +504,11 @@ async def convert(ctx, quantity: int):
                 await ctx.send(result_text)
                 return
         except TimeoutError:
-            ctx.send("Timed out")
+            await ctx.send("Timed out")
 
+@bot.command()
+async def help(ctx, *command_context):
+    await ctx.send(HelpfileReader.read(PREFIX, command_context))
 
 def start_bot():
     token = SecretManager.secrets['discord']['clientToken']
