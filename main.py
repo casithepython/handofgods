@@ -252,9 +252,10 @@ def insert_attribute(discord_id, attribute_id, value, start_turn, expiry_turn):
 def increase_attribute(discord_id, attribute_id, value, expiry_turn):
     insert_attribute(discord_id, attribute_id, value, current_turn(), expiry_turn)
 
-def get_attribute(discord_id, attribute_id):
+def get_attribute(discord_id, attribute_id, turn=None):
     value = None
-    turn = current_turn()
+    if turn is None:
+        turn = current_turn()
     with connect() as cursor:
         cursor.execute(
             "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
