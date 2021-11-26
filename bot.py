@@ -13,12 +13,34 @@ research_cache = {}
 
 bot = commands.Bot(command_prefix="?")
 
+
 @bot.command()
-async def join(ctx,name:str):
-    result = db.new_user(name,ctx.author.id)
+async def join(ctx, name: str):
+    result = db.new_user(name, ctx.author.id)
     await ctx.send(result[1])
     return
 
+
+@bot.command()
+async def user(ctx, name:str, argument:str = None):
+    discord_id = None
+    discord_id = db.get_user_by_name(name)
+    info = db.get_player_info(discord_id)
+    if argument is None:
+        output_text = \
+            "**"+str(info["name"]) + ":**\n" + \
+            "Pantheon: " + str(db.get_pantheon_name(info["pantheon"])) + "\n" + \
+            "Soldiers: " + str(db.get_army(discord_id)) + "\n"+\
+            "Functionaries" + str(db.get_attribute(discord_id,Attributes.FUNCTIONARIES)) + "\n"+ \
+            "Priests: " + str(db.get_attribute(discord_id,Attributes.PRIESTS)) + "\n\n"+ \
+            "**Battle statistics:**\n" + \
+            "Attack: " + str(db.get_attribute(discord_id,Attributes.ATTACK)) + "\n" + \
+            "Defense: " + str(db.get_attribute(discord_id, Attributes.DEFENSE)) + "\n" + \
+            "Armor: " + str(db.get_attribute(discord_id, Attributes.ARMOR)) + "\n" + \
+            "Initiative: " + str(db.get_attribute(discord_id, Attributes.INITIATIVE)) + "\n\n" + \
+            "**Power:**\n" + \
+            "Current DP: " + str(db.get_attribute(discord_id,Attributes.POWER)) + \
+            "Income"
 @bot.command()
 async def research(ctx, *, tech_name):
     tech_id = db.get_tech_id(tech_name)

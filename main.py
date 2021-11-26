@@ -546,6 +546,23 @@ def current_turn():
     return turn
 
 
+def calculate_income(discord_id):
+    population_bonus_power = get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL) + get_attribute(
+        discord_id, Attributes.BONUS_POWER_PER_SOLDIER) + get_attribute(discord_id,
+                                                                        Attributes.BONUS_POWER_PER_PRIEST)
+    boost_capacity_priest = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_CAPACITY)
+    boost_capacity = get_attribute(discord_id, Attributes.PRIESTS) * boost_capacity_priest
+    income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power,
+                                                                                        boost_capacity)
+
+    # Base income
+    base_income = \
+        get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id,
+                                                                            Attributes.INCOME_PER_FUNCTIONAL) + \
+        get_attribute(discord_id, Attributes.SOLDIERS) * get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER) + \
+        get_attribute(discord_id, Attributes.PRIESTS) * get_attribute(discord_id, Attributes.INCOME_PER_PRIEST)
+
+    return income_boost+base_income
 def new_turn():
     # Increase turn counter
     with connect() as cursor:
@@ -563,20 +580,7 @@ def new_turn():
 
         # Check for and add income
         # Population bonus power
-        population_bonus_power = get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL) + get_attribute(
-            discord_id, Attributes.BONUS_POWER_PER_SOLDIER) + get_attribute(discord_id,
-                                                                            Attributes.BONUS_POWER_PER_PRIEST)
-        boost_capacity_priest = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_CAPACITY)
-        boost_capacity = get_attribute(discord_id, Attributes.PRIESTS) * boost_capacity_priest
-        income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power,
-                                                                                            boost_capacity)
-
-        # Base income
-        base_income = \
-            get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id,
-                                                                                Attributes.INCOME_PER_FUNCTIONAL) + \
-            get_attribute(discord_id, Attributes.SOLDIERS) * get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER) + \
-            get_attribute(discord_id, Attributes.PRIESTS) * get_attribute(discord_id, Attributes.INCOME_PER_PRIEST)
+        give_power(discord_id,calculate_income(discord_id))
 
         # Reset attack army counter
         attackers_to_add = get_attribute(discord_id, Attributes.SOLDIERS) - get_attribute(discord_id,
@@ -680,6 +684,13 @@ def get_pantheon(discord_id):
     return pantheon
 
 
+def get_pantheon_name(pantheon_id):
+    name = None
+    with connect() as cursor:
+        cursor.execute("SELECT name FROM pantheons WHERE id = ?", (pantheon_id,))
+        name = cursor.fetchone()[0]
+    return name
+
 # ----------------------------------------
 # Battles
 # ----------------------------------------
@@ -736,6 +747,10 @@ def generate_damage(quantity, limit):
 
 def expected_damage(player_discord, other_player_discord, quantity):
     return [[0, 0, 0], 0, 0]
+
+
+def get_army(discord_id):
+    return get_attribute(discord_id,Attributes.SOLDIERS)
 
 
 def deal_attack_damage(discord_id, damage):
