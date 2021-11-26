@@ -145,89 +145,63 @@ async def research(ctx, *, tech_name):
 
 @bot.command()
 async def battle(ctx, player_name: str, quantity: int):
+    from user_interaction import user_react_on_message
+    import formatting
+
     player_discord = ctx.author.id
     other_player_discord = db.get_user_by_name(player_name)
-
-    expected_outcome = db.expected_damage(player_discord, other_player_discord, quantity)
-
+    if player_discord is None:
+        await ctx.send('You have not joined this game yet.')
+        return
     if other_player_discord is None:
         await ctx.send('Player "{}" does not exist.'.format(player_name))
         return
-    elif player_discord is None:
-        await ctx.send('You have not joined this game yet.')
+    
+    expected_outcome = db.expected_damage(player_discord, other_player_discord, quantity)
+
+    # Phase 1: output text
+    output_text = formatting.battle_ask_continue(
+        player_name,
+        quantity,
+        expected_outcome[2],
+        expected_outcome[0][0],
+        expected_outcome[0][1],
+        expected_outcome[0][2],
+        expected_outcome[1]
+    )
+
+    do_battle = user_react_on_message(bot, ctx, output_text, ctx.author, {
+        '\N{REGIONAL INDICATOR SYMBOL LETTER A}': True,
+        '\N{REGIONAL INDICATOR SYMBOL LETTER B}': False,
+    })
+    if do_battle is None:
+        await ctx.send("Timed out")
         return
+
+    if do_battle:
+        results = db.attack(player_discord, other_player_discord, quantity)
+        if results[0]:
+            remaining_attackers = db.get_attribute(player_discord, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
+            remaining_soldiers = db.get_attribute(player_discord, Attributes.SOLDIERS)
+            remaining_enemy_soldiers = db.get_attribute(other_player_discord, Attributes.SOLDIERS)
+            result_text = formatting.battle_report(
+                results[1][0][0],
+                results[1][0][1],
+                results[1][0][2],
+                remaining_enemy_soldiers,
+                results[1][1],
+                remaining_soldiers,
+                remaining_attackers
+            )
+            
+            await ctx.send(result_text)
+            return
+        else:
+            await ctx.send(results[1])
+            return
     else:
-        # Phase 1: output text
-        output_text = 'Attacking {other_player_name} with {quantity} troops).\n' \
-                      'Your probability of eliminating all enemy troops is {probability}.' \
-                      'The expected damage is {expected_soldiers} soldiers, {expected_functionaries} functionaries' \
-                      ', and {expected_priests} priests. The expected troop loss is {expected_loss}.' \
-                      'Remember that these probabilities are only estimates.\n' \
-                      ':regional_indicator_a: To continue with the battle\n' \
-                      ':regional_indicator_b: To cancel the battle'.format(
-            other_player_name=player_name, quantity=quantity, probability=expected_outcome[2],
-            expected_soldiers=expected_outcome[0][0], expected_functionaries=expected_outcome[0][1],
-            expected_priests=expected_outcome[0][2], expected_loss=expected_outcome[1]
-        )
-        message = await ctx.send(output_text)
-        reactions = {
-            '\N{REGIONAL INDICATOR SYMBOL LETTER A}': True,
-            '\N{REGIONAL INDICATOR SYMBOL LETTER B}': False,
-        }
-        for reaction in reactions.keys():
-            await message.add_reaction(reaction)
-
-        def check(reaction, user):
-            if str(reaction.emoji) not in reactions:
-                return False
-            if user.id != ctx.author.id:
-                return False
-            if reaction.message.id != message.id:
-                return False
-            return True
-
-        try:
-            user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
-            emoji = str(user_reaction.emoji)
-
-            # wait for reaction from correct player
-            for reaction in reactions.keys():
-                if reaction != emoji:
-                    await message.remove_reaction(reaction, ctx.me)
-
-            if reactions[emoji]:
-                results = db.attack(player_discord, other_player_discord, quantity)
-                if results[0]:
-                    remaining_attackers = db.get_attribute(player_discord, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-                    remaining_soldiers = db.get_attribute(player_discord, Attributes.SOLDIERS)
-                    remaining_enemy_soldiers = db.get_attribute(other_player_discord, Attributes.SOLDIERS)
-
-                    result_text = "**Battle results**:\n" \
-                                  "Soldiers killed: *{soldiers_killed}*\n" \
-                                  "Functionaries killed: *{functionaries_killed}*\n" \
-                                  "Priests killed: *{priests_killed}*\n" \
-                                  "Enemy troops remaining: *{enemy_troops_remaining}*\n\n" \
-                                  "Soldiers lost: *{soldiers_lost}*\n" \
-                                  "Soldiers remaining: *{soldiers_remaining}*\n" \
-                                  "Attackers remaining: *{attackers_remaining}*".format(
-                        soldiers_killed=results[1][0][0], functionaries_killed=results[1][0][1],
-                        priests_killed=results[1][0][2], enemy_troops_remaining=remaining_enemy_soldiers,
-                        soldiers_lost=results[1][1], soldiers_remaining=remaining_soldiers,
-                        attackers_remaining=remaining_attackers
-                    )
-                    await ctx.send(result_text)
-                    return
-                elif not results[0]:
-                    await ctx.send(results[1])
-                    return
-                else:
-                    await ctx.send("This should not happen")
-                    return
-            else:
-                await ctx.send("Battle canceled.")
-                return
-        except TimeoutError:
-            ctx.send("Timed out")
+        await ctx.send("Battle canceled.")
+        return
 
 
 @bot.command()

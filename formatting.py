@@ -117,3 +117,39 @@ def request_research_method(tech_name, success_probs, success_cost, attempt_cost
           success_cost=success_cost,
           attempt_costs=attempt_costs
         )
+
+
+def battle_report(soldiers_killed, functionaries_killed, priests_killed, enemy_troops_remaining, soldiers_lost, soldiers_remaining, attackers_remaining):
+  return  "**Battle results**:\n" \
+          "Soldiers killed: *{soldiers_killed}*\n" \
+          "Functionaries killed: *{functionaries_killed}*\n" \
+          "Priests killed: *{priests_killed}*\n" \
+          "Enemy troops remaining: *{enemy_troops_remaining}*\n\n" \
+          "Soldiers lost: *{soldiers_lost}*\n" \
+          "Soldiers remaining: *{soldiers_remaining}*\n" \
+          "Attackers remaining: *{attackers_remaining}*".format(
+            soldiers_killed=soldiers_killed,
+            functionaries_killed=functionaries_killed,
+            priests_killed=priests_killed,
+            enemy_troops_remaining=enemy_troops_remaining,
+            soldiers_lost=soldiers_lost,
+            soldiers_remaining=soldiers_remaining,
+            attackers_remaining=attackers_remaining
+          )
+
+def battle_ask_continue(other_player_name, quantity, probability, expected_soldiers, expected_functionaries, expected_priests, expected_loss):
+  return 'Attacking {other_player_name} with {quantity} troops).\n' \
+                  'Your probability of eliminating all enemy troops is {probability}.' \
+                  'The expected damage is {expected_soldiers} soldiers, {expected_functionaries} functionaries' \
+                  ', and {expected_priests} priests. The expected troop loss is {expected_loss}.' \
+                  'Remember that these probabilities are only estimates.\n' \
+                  ':regional_indicator_a: To continue with the battle\n' \
+                  ':regional_indicator_b: To cancel the battle'.format(
+        other_player_name=other_player_name,
+        quantity=quantity,
+        probability=probability,
+        expected_soldiers=expected_soldiers,
+        expected_functionaries=expected_functionaries,
+        expected_priests=expected_priests,
+        expected_loss=expected_loss
+    )
