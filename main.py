@@ -875,7 +875,7 @@ def recruit_soldiers(discord_id, quantity):
     spend_power(discord_id, dp_cost)
     increase_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
     increase_attribute(discord_id, Attributes.SOLDIERS, quantity, NEVER_EXPIRES)
-    return True
+    return True, "Successfully created {soldiers} soldiers.".format(soldiers=quantity)
 
 def disband_soldiers(discord_id, quantity):
     # Phase 1: Assertions
@@ -897,7 +897,7 @@ def disband_soldiers(discord_id, quantity):
     spend_power(discord_id, dp_cost)
     increase_attribute(discord_id, Attributes.SOLDIERS, -quantity, NEVER_EXPIRES)
     increase_attribute(discord_id, Attributes.FUNCTIONARIES, quantity, NEVER_EXPIRES)
-    return True
+    return True, "Successfully disbanded {soldiers} soldiers".format(soldiers=quantity)
 
 def recruit_priests(discord_id, quantity):
     if not user_discord_id_exists(discord_id):
