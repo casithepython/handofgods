@@ -1,5 +1,4 @@
 import json
-import math
 import random
 import sqlite3
 import Attributes
@@ -9,9 +8,6 @@ app = Flask(__name__)
 
 NEVER_EXPIRES = -1
 NO_PANTHEON = -1
-
-
-
 
 class connect:
     def __init__(self):
