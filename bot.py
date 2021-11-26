@@ -110,6 +110,83 @@ async def info(ctx, name:str = None, info_type:str = None):
         return
 
 
+async def create(ctx,amount:int, type:str):
+    if amount > 0:
+        discord_id=ctx.author.id
+        from user_interaction import user_react_on_message
+        if type in ["priests", "priest"]:
+            output = "> You are creating {num:.0} priests at a cost of {cost:.0} per priest, for " \
+                     "a total of {total} DP." \
+                     "Do you wish to continue?\n> \n> " \
+                     ":thumbsup: Yes\n> " \
+                     ":thumbsdown: No".format(num=amount,cost=db.get_attribute(discord_id,Attributes.PRIEST_COST),
+                                              total=amount*db.get_attribute(discord_id,Attributes.PRIEST_COST))
+            await ctx.send(output)
+            do_create = user_react_on_message(bot, ctx, output, ctx.author, {
+                '\N{thumbsup}': True,
+                '\N{thumbsdown}': False,
+            })
+            if do_create:
+                results = db.recruit_priests(discord_id,amount)
+                await ctx.send(results[1])
+                return
+            else:
+                await ctx.send("Canceled.")
+                return
+
+        elif type in ["soldiers", "soldier", "troops"]:
+            output = "> You are creating {num:.0} soldiers at a cost of {cost:.0} per soldier, for " \
+                     "a total of {total} DP." \
+                     "Do you wish to continue?\n> \n> " \
+                     ":thumbsup: Yes\n> " \
+                     ":thumbsdown: No".format(num=amount, cost=db.get_attribute(discord_id, Attributes.SOLDIER_COST),
+                                              total=amount * db.get_attribute(discord_id, Attributes.SOLDIER_COST))
+            await ctx.send(output)
+            do_create = user_react_on_message(bot, ctx, output, ctx.author, {
+                '\N{thumbsup}': True,
+                '\N{thumbsdown}': False,
+            })
+            if do_create:
+                results = db.recruit_soldiers(discord_id, amount)
+                await ctx.send(results[1])
+                return
+            else:
+                await ctx.send("Canceled.")
+                return
+        else:
+            await ctx.send("Incorrect type.")
+            return
+    else:
+        await ctx.send("> Nice try.")
+        return
+
+async def disband(ctx,amount:int):
+    if amount > 0:
+        discord_id=ctx.author.id
+        from user_interaction import user_react_on_message
+        output = "> You are disbanding {num:.0} soldiers at a disband cost of {cost:.0} per soldier, for " \
+                 "a total of {total} DP." \
+                 "Do you wish to continue?\n> \n> " \
+                 ":thumbsup: Yes\n> " \
+                 ":thumbsdown: No".format(num=amount, cost=db.get_attribute(discord_id, Attributes.SOLDIER_DISBAND_COST),
+                                          total=amount * db.get_attribute(discord_id, Attributes.SOLDIER_DISBAND_COST))
+        await ctx.send(output)
+        do_create = user_react_on_message(bot, ctx, output, ctx.author, {
+            '\N{thumbsup}': True,
+            '\N{thumbsdown}': False,
+        })
+        if do_create:
+            results = db.recruit_soldiers(discord_id, amount)
+            await ctx.send(results[1])
+            return
+        else:
+            await ctx.send("Canceled.")
+            return
+    else:
+        await ctx.send("> Nice try.")
+        return
+
+
 @bot.command()
 async def research(ctx, *, tech_name):
     import formatting
