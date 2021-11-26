@@ -50,6 +50,15 @@
               ]
             }
           }
+        },
+        "player": {
+          "index": "Administrative commmands regarding players",
+          "subcommands": {
+            "delete": {
+              "index": "Delete player",
+              "parameters": ["PLAYERNAME"]
+            }
+          }
         }
       }
     }
