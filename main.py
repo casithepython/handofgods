@@ -108,72 +108,74 @@ def user_discord_id_exists(discord_id):
 
 
 def new_user(name, discord_id):
-    if not user_discord_id_exists(discord_id) and not user_name_exists(name):
-        with connect() as cursor:
-            cursor.execute('INSERT INTO players (name, display_name,discord_id) VALUES (?,?,?)',
-                           (name.casefold(), name, discord_id))
-            cursor.execute("SELECT discord_id FROM players WHERE name = ?", (name.casefold(),))
-            discord_id = cursor.fetchone()[0]
-            defaults = {
-                Attributes.ATTACK: 0,
-                Attributes.DEFENSE: 0,
-                Attributes.INITIATIVE: 0,
-                Attributes.ARMOR: 1,
-                Attributes.RESEARCH_COST_MULTIPLIER: 1,
-                Attributes.DIVINE_INSPIRATION_RATE: 0.05,
-                Attributes.DIVINE_INSPIRATION_COST: 2,
-                Attributes.AWAKE_REVELATION_RATE: 0.2,
-                Attributes.AWAKE_REVELATION_COST: 10,
-                Attributes.ASLEEP_REVELATION_RATE: 0.1,
-                Attributes.ASLEEP_REVELATION_COST: 5,
-                Attributes.DIVINE_AVATAR_RATE: 1,
-                Attributes.DIVINE_AVATAR_COST: 20,
-                Attributes.PRIEST_RESEARCH_BONUS: 0.3,
-                Attributes.PASSIVE_POPULATION_GROWTH_RATE: 0.13,
-                Attributes.INCOME_PER_FUNCTIONAL: 1,
-                # Attributes.INCOME_PER_SOLDIER: 0,
-                # Attributes.INCOME_PER_PRIEST: 0,
-                Attributes.BONUS_POWER_PER_FUNCTIONAL: 1,
-                Attributes.PRIEST_INCOME_BOOST_CAPACITY: 5,
-                Attributes.ENEMY_CONVERSION_RATE: 0.1,
-                Attributes.ENEMY_CONVERSION_COST: 2,
-                Attributes.NEUTRAL_CONVERSION_RATE: 0.2,
-                Attributes.NEUTRAL_CONVERSION_COST: 1,
-                Attributes.ENEMY_PRIEST_CONVERSION_RATE: 0.05,
-                Attributes.ENEMY_PRIEST_CONVERSION_COST: 50,
-                Attributes.PANTHEON_BONUS_MULTIPLIER: 0.5,
-                Attributes.MAXIMUM_PRIEST_CHANNELING: 10,
-                # Attributes.PRIEST_COST: 0,
-                # Attributes.SOLDIER_COST: 0,
-                # Attributes.SOLDIER_DISBAND_COST: 0,
-                # Attributes.PRIESTS: 0,
-                # Attributes.SOLDIERS: 0,
-                Attributes.FUNCTIONARIES: 1000,
-                # Attributes.POWER: 0,
-                # Attributes.TOTAL_CONVERTED: 0,
-                # Attributes.TOTAL_POACHED: 0,
-                # Attributes.TOTAL_DESTROYED: 0,
-                # Attributes.TOTAL_LOST: 0,
-                # Attributes.TOTAL_MASSACRED: 0,
-                # Attributes.TOTAL_POPULATION_LOST: 0,
-                # Attributes.TOTAL_SPENT: 0,
-                # Attributes.BONUS_POWER_PER_SOLDIER: 0,
-                # Attributes.BONUS_POWER_PER_PRIEST: 0,
-                Attributes.ATTACKS_PER_TURN: 1,
-                # Attributes.FUNCTIONARY_ARMOR: 0,
-                # Attributes.FUNCTIONARY_DEFENSE: 0,
-                # Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0,
-                # Attributes.TOTAL_PRIEST_POWER: 0,
-                Attributes.PRIEST_INCOME_BOOST_RATE: 5,
-                Attributes.DP_BUFF_COST_MULTIPLIER: 0.01
-            }
-            for attribute_id, value in defaults.items():
-                cursor.execute(
-                    "INSERT INTO player_attributes (discord_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
-                    (discord_id, attribute_id, value, NEVER_EXPIRES))
-        return True, "Successfully added user " + name
-    else:
-        return False, "User or discord id already in system."
+    if user_discord_id_exists(discord_id):
+        return "You have already joined the game"
+    if user_name_exists(name):
+        return False, "A player has already taken that name"
+
+    with connect() as cursor:
+        cursor.execute('INSERT INTO players (name, display_name,discord_id) VALUES (?,?,?)',
+                        (name.casefold(), name, discord_id))
+        cursor.execute("SELECT discord_id FROM players WHERE name = ?", (name.casefold(),))
+        discord_id = cursor.fetchone()[0]
+        defaults = {
+            Attributes.ATTACK: 0,
+            Attributes.DEFENSE: 0,
+            Attributes.INITIATIVE: 0,
+            Attributes.ARMOR: 1,
+            Attributes.RESEARCH_COST_MULTIPLIER: 1,
+            Attributes.DIVINE_INSPIRATION_RATE: 0.05,
+            Attributes.DIVINE_INSPIRATION_COST: 2,
+            Attributes.AWAKE_REVELATION_RATE: 0.2,
+            Attributes.AWAKE_REVELATION_COST: 10,
+            Attributes.ASLEEP_REVELATION_RATE: 0.1,
+            Attributes.ASLEEP_REVELATION_COST: 5,
+            Attributes.DIVINE_AVATAR_RATE: 1,
+            Attributes.DIVINE_AVATAR_COST: 20,
+            Attributes.PRIEST_RESEARCH_BONUS: 0.3,
+            Attributes.PASSIVE_POPULATION_GROWTH_RATE: 0.13,
+            Attributes.INCOME_PER_FUNCTIONAL: 1,
+            # Attributes.INCOME_PER_SOLDIER: 0,
+            # Attributes.INCOME_PER_PRIEST: 0,
+            Attributes.BONUS_POWER_PER_FUNCTIONAL: 1,
+            Attributes.PRIEST_INCOME_BOOST_CAPACITY: 5,
+            Attributes.ENEMY_CONVERSION_RATE: 0.1,
+            Attributes.ENEMY_CONVERSION_COST: 2,
+            Attributes.NEUTRAL_CONVERSION_RATE: 0.2,
+            Attributes.NEUTRAL_CONVERSION_COST: 1,
+            Attributes.ENEMY_PRIEST_CONVERSION_RATE: 0.05,
+            Attributes.ENEMY_PRIEST_CONVERSION_COST: 50,
+            Attributes.PANTHEON_BONUS_MULTIPLIER: 0.5,
+            Attributes.MAXIMUM_PRIEST_CHANNELING: 10,
+            # Attributes.PRIEST_COST: 0,
+            # Attributes.SOLDIER_COST: 0,
+            # Attributes.SOLDIER_DISBAND_COST: 0,
+            # Attributes.PRIESTS: 0,
+            # Attributes.SOLDIERS: 0,
+            Attributes.FUNCTIONARIES: 1000,
+            # Attributes.POWER: 0,
+            # Attributes.TOTAL_CONVERTED: 0,
+            # Attributes.TOTAL_POACHED: 0,
+            # Attributes.TOTAL_DESTROYED: 0,
+            # Attributes.TOTAL_LOST: 0,
+            # Attributes.TOTAL_MASSACRED: 0,
+            # Attributes.TOTAL_POPULATION_LOST: 0,
+            # Attributes.TOTAL_SPENT: 0,
+            # Attributes.BONUS_POWER_PER_SOLDIER: 0,
+            # Attributes.BONUS_POWER_PER_PRIEST: 0,
+            Attributes.ATTACKS_PER_TURN: 1,
+            # Attributes.FUNCTIONARY_ARMOR: 0,
+            # Attributes.FUNCTIONARY_DEFENSE: 0,
+            # Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0,
+            # Attributes.TOTAL_PRIEST_POWER: 0,
+            Attributes.PRIEST_INCOME_BOOST_RATE: 5,
+            Attributes.DP_BUFF_COST_MULTIPLIER: 0.01
+        }
+        for attribute_id, value in defaults.items():
+            cursor.execute(
+                "INSERT INTO player_attributes (discord_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
+                (discord_id, attribute_id, value, NEVER_EXPIRES))
+    return True, "Successfully added user " + name
 
 
 def get_player(discord_id):
