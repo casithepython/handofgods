@@ -166,8 +166,8 @@ async def disband(ctx,amount:int):
     if amount > 0:
         discord_id=ctx.author.id
         from user_interaction import user_react_on_message
-        output = "> You are disbanding {num} soldiers at a disband cost of {cost:.0} per soldier, for " \
-                 "a total of {total} DP." \
+        output = "> You are disbanding {num:.0f} soldiers at a disband cost of {cost:.0f} per soldier, for " \
+                 "a total of {total:.0f} DP." \
                  "Do you wish to continue?\n> \n> " \
                  ":thumbsup: Yes\n> " \
                  ":thumbsdown: No".format(num=amount, cost=db.get_attribute(discord_id, Attributes.SOLDIER_DISBAND_COST),
