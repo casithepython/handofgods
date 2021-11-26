@@ -68,17 +68,17 @@ def income_info(info, discord_id):
 
 def war_info(info, discord_id):
   return  "**{name}'s army:**\n" \
-          "Soldiers: {soldiers} \n" \
-          "Available attackers: {attackers} \n" \
-          "Attacks per soldier per turn: {attacks_per_turn} \n\n" \
-          "Attack: {attack} \n" \
-          "Defense: {defense} \n" \
-          "Armor: {armor} \n" \
-          "Initiative: {initiative}\n\n"\
-          "Soldier cost: {soldier_cost}\n"\
-          "Soldier disband cost: {soldier_disband_cost}\n\n"\
-          "Functionary defense: {functionary_defense}\n"\
-          "Functionary armor: {functionary_armor}\n"\
+          "Soldiers: {soldiers:.0f} \n" \
+          "Available attackers: {attackers:.0f} \n" \
+          "Attacks per soldier per turn: {attacks_per_turn:.0f} \n\n" \
+          "Attack: {attack:.0f} \n" \
+          "Defense: {defense:.0f} \n" \
+          "Armor: {armor:.0f} \n" \
+          "Initiative: {initiative:.0f}\n\n"\
+          "Soldier cost: {soldier_cost:.0f}\n"\
+          "Soldier disband cost: {soldier_disband_cost:.0f}\n\n"\
+          "Functionary defense: {functionary_defense:.0f}\n"\
+          "Functionary armor: {functionary_armor:.0f}\n"\
           .format(
               name=info["display_name"],
               soldiers= int(db.get_attribute(discord_id,Attributes.SOLDIERS)),
@@ -97,10 +97,10 @@ def war_info(info, discord_id):
 
 def conversion_info(info, discord_id):
   return  "**{name}'s conversion metrics:**\n" \
-          "Enemy follower conversion: {enemy_rate:.1%}, {enemy_cost} DP \n" \
-          "Enemy priest conversion: {priest_convert_rate:.1%}, {priest_convert_cost} DP \n" \
-          "Neutral conversion: {neutral_rate:.1%}, {neutral_cost} DP \n\n" \
-          "Priest cost: {priest_cost} \n" \
+          "Enemy follower conversion: {enemy_rate:.1%}, {enemy_cost:.0f} DP \n" \
+          "Enemy priest conversion: {priest_convert_rate:.1%}, {priest_convert_cost:.0f} DP \n" \
+          "Neutral conversion: {neutral_rate:.1%}, {neutral_cost:.0f} DP \n\n" \
+          "Priest cost: {priest_cost:.0f} \n" \
           "Max priest channeling per turn: {channeling} \n".format(
             name=info["display_name"],
             enemy_rate=int(db.get_attribute(discord_id, Attributes.ENEMY_CONVERSION_RATE)),
@@ -116,10 +116,10 @@ def conversion_info(info, discord_id):
 
 def research_info(info, discord_id):
   return  "**{name}'s research metrics:**\n" \
-          "Divine inspiration: {inspiration_rate:.1%}, {inspiration_cost} DP/attempt \n" \
-          "Revelation (asleep): {asleep_rate:.1%}, {asleep_cost} DP/attempt \n" \
-          "Revelation (awake): {awake_rate:.1%}, {awake_cost} DP/attempt \n" \
-          "Divine avatar: {avatar_rate:.1%}, {avatar_cost} DP/attempt \n\n" \
+          "Divine inspiration: {inspiration_rate:.1%}, {inspiration_cost:.0f} DP/attempt \n" \
+          "Revelation (asleep): {asleep_rate:.1%}, {asleep_cost:.0f} DP/attempt \n" \
+          "Revelation (awake): {awake_rate:.1%}, {awake_cost:.0f} DP/attempt \n" \
+          "Divine avatar: {avatar_rate:.1%}, {avatar_cost:.0f} DP/attempt \n\n" \
           "Priest research bonus: +{priest_bonus:.0%} \n\n" \
           "Research cost multiplier (increases proportional to population): {multiplier}".format(
             name=info["display_name"],
@@ -137,10 +137,10 @@ def research_info(info, discord_id):
 
 def request_research_method(tech_name, success_probs, success_cost, attempt_costs):
   return  'Attempt research of the technology "{tech_name}" (success cost {success_cost}):\n' \
-          ':regional_indicator_a: for divine inspiration (success probability {success_probs[0]:.1%}, attempt cost {attempt_costs[0]})\n' \
-          ':regional_indicator_b: for waking revelation (success probability {success_probs[1]:.1%}, attempt cost {attempt_costs[1]})\n' \
-          ':regional_indicator_c: for dream revelation (success probability {success_probs[2]:.1%}, attempt cost {attempt_costs[2]})\n' \
-          ':regional_indicator_d: to incarnate and command research (success probability {success_probs[3]:.1%}, attempt cost {attempt_costs[3]})' \
+          ':regional_indicator_a: for divine inspiration (success probability {success_probs[0]:.1%}, attempt cost {attempt_costs[0]:.0f})\n' \
+          ':regional_indicator_b: for waking revelation (success probability {success_probs[1]:.1%}, attempt cost {attempt_costs[1]:.0f})\n' \
+          ':regional_indicator_c: for dream revelation (success probability {success_probs[2]:.1%}, attempt cost {attempt_costs[2]:.0f})\n' \
+          ':regional_indicator_d: to incarnate and command research (success probability {success_probs[3]:.1%}, attempt cost {attempt_costs[3]:.0f})' \
         .format(
           tech_name=tech_name,
           success_probs=success_probs,
@@ -151,13 +151,13 @@ def request_research_method(tech_name, success_probs, success_cost, attempt_cost
 
 def battle_report(soldiers_killed, functionaries_killed, priests_killed, enemy_troops_remaining, soldiers_lost, soldiers_remaining, attackers_remaining):
   return  "**Battle results**:\n" \
-          "Soldiers killed: *{soldiers_killed}*\n" \
-          "Functionaries killed: *{functionaries_killed}*\n" \
-          "Priests killed: *{priests_killed}*\n" \
-          "Enemy troops remaining: *{enemy_troops_remaining}*\n\n" \
-          "Soldiers lost: *{soldiers_lost}*\n" \
-          "Soldiers remaining: *{soldiers_remaining}*\n" \
-          "Attackers remaining: *{attackers_remaining}*".format(
+          "Soldiers killed: *{soldiers_killed:.0f}*\n" \
+          "Functionaries killed: *{functionaries_killed:.0f}*\n" \
+          "Priests killed: *{priests_killed:.0f}*\n" \
+          "Enemy troops remaining: *{enemy_troops_remaining:.0f}*\n\n" \
+          "Soldiers lost: *{soldiers_lost:.0f}*\n" \
+          "Soldiers remaining: *{soldiers_remaining:.0f}*\n" \
+          "Attackers remaining: *{attackers_remaining:.0f}*".format(
             soldiers_killed=soldiers_killed,
             functionaries_killed=functionaries_killed,
             priests_killed=priests_killed,
@@ -168,10 +168,10 @@ def battle_report(soldiers_killed, functionaries_killed, priests_killed, enemy_t
           )
 
 def battle_ask_continue(other_player_name, quantity, probability, expected_soldiers, expected_functionaries, expected_priests, expected_loss):
-  return 'Attacking {other_player_name} with {quantity} troops).\n' \
-                  'Your probability of eliminating all enemy troops is {probability}.' \
-                  'The expected damage is {expected_soldiers} soldiers, {expected_functionaries} functionaries' \
-                  ', and {expected_priests} priests. The expected troop loss is {expected_loss}.' \
+  return 'Attacking {other_player_name} with {quantity:.0f} troops).\n' \
+                  'Your probability of eliminating all enemy troops is {probability:.1%}.' \
+                  'The expected damage is {expected_soldiers:.1f} soldiers, {expected_functionaries:.1f} functionaries' \
+                  ', and {expected_priests:.1f} priests. The expected troop loss is {expected_loss:.1f}.' \
                   'Remember that these probabilities are only estimates.\n' \
                   ':regional_indicator_a: To continue with the battle\n' \
                   ':regional_indicator_b: To cancel the battle'.format(
@@ -187,11 +187,11 @@ def battle_ask_continue(other_player_name, quantity, probability, expected_soldi
 def conversion_target_type(neutral_success_rate, neutral_cost, enemy_success_rate, enemy_cost, priest_success_rate, priest_cost):
   return  'What type of people do you want to convert?\n' \
           ':regional_indicator_a: Neutrals (Success rate {neutral_success_rate:.1%},' \
-          ' Cost {neutral_cost})\n' \
+          ' Cost {neutral_cost:.0f})\n' \
           ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, ' \
-          'Cost {enemy_cost})\n' \
+          'Cost {enemy_cost:.0f})\n' \
           ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%},' \
-          ' Cost {priest_cost})\n'.format(
+          ' Cost {priest_cost:.0f})\n'.format(
             neutral_success_rate=neutral_success_rate,
             neutral_cost=neutral_cost,
             enemy_success_rate=enemy_success_rate,
