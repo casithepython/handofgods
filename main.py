@@ -465,6 +465,21 @@ def check_prerequisites(discord_id, tech_id):
 
     return len(required_prerequisites) == 0, required_prerequisites
 
+def technology_get_prerequisites(technology_id):
+    with connect() as cursor:
+        cursor.execute("SELECT prerequisite_id FROM tech_prerequisites WHERE tech_id = ?", (technology_id,))
+        return [row[0] for row in cursor.fetchall()]
+
+def technologies_get_prereq_display_info(technology_id):
+    prereq_ids = technology_get_prerequisites(technology_id)
+    with connect() as cursor:
+        cursor.execute("SELECT prerequisite_id, is_hard, cost_bonus FROM tech_prerequisites WHERE tech_id = ?", (technology_id,))
+        rows = ((row[0], row[1], row[2]) for row in cursor.fetchall())
+        prereq_ids, is_hard, cost_bonus = zip(*rows)
+        cursor.execute("SELECT name FROM technologies WHERE id in ({questionmarks})".format(questionmarks=','.join('?' * len(prereq_ids))), tuple(prereq_ids))
+        names = [row[0] for row in cursor.fetchall()]
+
+        return zip(prereq_ids, names, is_hard, cost_bonus)
 
 # ----------------------------------------
 # Research
