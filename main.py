@@ -179,14 +179,17 @@ def get_player(discord_id):
             "discord_id":info[3],
             "pantheon":info[4],
             "tech": get_player_techs(discord_id),
-            "attributes":[(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in range(get_num_attributes())]}
+            "attributes":get_player_attributes(discord_id)}
 
 
 def get_player_id(discord_id):
     return get_player_id_from_discord_id(discord_id)
 
 
-def get_player_attributes(discord_id)
+def get_player_attributes(discord_id):
+    return [(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in range(get_num_attributes())]
+
+
 def get_player_info(discord_id):
     info = []
     with connect() as cursor:
