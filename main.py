@@ -171,13 +171,14 @@ def new_user(name, discord_id):
         return False, "User or discord id already in system."
 
 
-def get_user(discord_id):
+def get_player(discord_id):
     info = get_player_info(discord_id)
     return {"id":info[0],
             "name":info[1],
             "display_name":info[2],
             "discord_id":info[3],
             "pantheon":info[4],
+            "tech": get_player_techs(discord_id),
             "attributes":[(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in range(get_num_attributes())]}
 
 
