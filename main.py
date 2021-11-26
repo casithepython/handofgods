@@ -871,6 +871,7 @@ def recruit_soldiers(discord_id, quantity):
         return None
     quantity = int(quantity)
 
+    # Phase 2: Actually changing stuff
     functionary_count = get_attribute(discord_id, Attributes.FUNCTIONARIES)
     if functionary_count < quantity:
         return False # Impossible: not enough functionaries
@@ -879,6 +880,20 @@ def recruit_soldiers(discord_id, quantity):
     increase_attribute(discord_id, Attributes.SOLDIERS, quantity, NEVER_EXPIRES)
     return True
 
+def disband_soldiers(discord_id, quantity):
+    # Phase 1: Assertions
+    if not user_discord_id_exists(discord_id):
+        return None
+    quantity = int(quantity)
+
+    # Phase 2: Actually changing stuff
+    soldier_count = get_attribute(discord_id, Attributes.SOLDIERS)
+    if soldier_count < quantity:
+        return False # Impossible: not enough soldiers
+    
+    increase_attribute(discord_id, Attributes.SOLDIERS, -quantity, NEVER_EXPIRES)
+    increase_attribute(discord_id, Attributes.FUNCTIONARIES, quantity, NEVER_EXPIRES)
+    return True
 
 # new_user("casi", 466015764919353346)
 # complete_research(1, 1)
