@@ -211,96 +211,94 @@ async def convert(ctx, quantity: int):
     if player_discord is None:
         await ctx.send('You have not joined this game yet.')
         return
-    else:
-        # Phase 1: output text
-        output_text = 'What type of people do you want to convert?\n' \
-                      ':regional_indicator_a: Neutrals (Success rate {neutral_success_rate:.1%},' \
-                      ' Cost {neutral_cost})\n' \
-                      ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, ' \
-                      'Cost {enemy_cost})\n' \
-                      ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%},' \
-                      ' Cost {priest_cost})\n' \
-            .format(neutral_success_rate=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE),
-                    neutral_cost=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST),
-                    enemy_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE),
-                    enemy_cost=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST),
-                    priest_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE),
-                    priest_cost=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST),
-                    )
 
-        message = await ctx.send(output_text)
-        reactions = {
-            '\N{REGIONAL INDICATOR SYMBOL LETTER A}': "neutral",
-            '\N{REGIONAL INDICATOR SYMBOL LETTER B}': "enemy",
-            '\N{REGIONAL INDICATOR SYMBOL LETTER C}': "enemy_priest",
-        }
+    # Phase 1: output text
+    output_text = 'What type of people do you want to convert?\n' \
+                    ':regional_indicator_a: Neutrals (Success rate {neutral_success_rate:.1%},' \
+                    ' Cost {neutral_cost})\n' \
+                    ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, ' \
+                    'Cost {enemy_cost})\n' \
+                    ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%},' \
+                    ' Cost {priest_cost})\n' \
+        .format(neutral_success_rate=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE),
+                neutral_cost=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST),
+                enemy_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE),
+                enemy_cost=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST),
+                priest_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE),
+                priest_cost=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST),
+                )
+
+    message = await ctx.send(output_text)
+    reactions = {
+        '\N{REGIONAL INDICATOR SYMBOL LETTER A}': "neutral",
+        '\N{REGIONAL INDICATOR SYMBOL LETTER B}': "enemy",
+        '\N{REGIONAL INDICATOR SYMBOL LETTER C}': "enemy_priest",
+    }
+    for reaction in reactions.keys():
+        await message.add_reaction(reaction)
+
+    def check(reaction, user):
+        if str(reaction.emoji) not in reactions:
+            return False
+        if user.id != ctx.author.id:
+            return False
+        if reaction.message.id != message.id:
+            return False
+        return True
+
+    try:
+
+        user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
+        emoji = str(user_reaction.emoji)
+
+        # wait for reaction from correct player
         for reaction in reactions.keys():
-            await message.add_reaction(reaction)
+            if reaction != emoji:
+                await message.remove_reaction(reaction, ctx.me)
 
-        def check(reaction, user):
-            if str(reaction.emoji) not in reactions:
-                return False
-            if user.id != ctx.author.id:
-                return False
-            if reaction.message.id != message.id:
-                return False
-            return True
+        if reactions[emoji] == "neutral":
+            results = db.attempt_conversion(player_discord=player_discord,
+                                            quantity=quantity,
+                                            person_type=reactions[emoji],
+                                            other_player_discord=None)
+            if results[0]:
+                result_text = "Successfully converted {converts}.".format(converts=results[1])
+            else not results[0]:
+                result_text = results[1]
+            await ctx.send(result_text)
+            return
+        elif reactions[emoji] in ["enemy", "enemy_priest"]:
+            def check_author(author):
+                def inner_check(message):
+                    if message.author.id != ctx.author.id:
+                        return False
+                    return True
 
-        try:
+                return inner_check
 
-            user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
-            emoji = str(user_reaction.emoji)
-
-            # wait for reaction from correct player
-            for reaction in reactions.keys():
-                if reaction != emoji:
-                    await message.remove_reaction(reaction, ctx.me)
-
-            if reactions[emoji] == "neutral":
-                results = db.attempt_conversion(player_discord=player_discord,
-                                                quantity=quantity,
-                                                person_type=reactions[emoji],
-                                                other_player_discord=None)
-                if results[0]:
-                    result_text = "Successfully converted {converts}.".format(converts=results[1])
-                elif not results[0]:
-                    result_text = results[1]
-                else:
-                    result_text = "This error should not exist."
-                await ctx.send(result_text)
-                return
-            elif reactions[emoji] in ["enemy", "enemy_priest"]:
-                def check_author(author):
-                    def inner_check(message):
-                        if message.author.id != ctx.author.id:
-                            return False
-                        return True
-
-                    return inner_check
-
-                await ctx.send("Please specify the player to attempt to convert away from. \n"
-                               "Avoid unnecessary whitespaces or characters.")
-                other_player_name = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-                other_player_name = other_player_name.content
-                results = db.attempt_conversion(player_discord=player_discord,
-                                                quantity=quantity,
-                                                person_type=reactions[emoji],
-                                                other_player_discord=db.get_user_by_name(other_player_name))
-                if results[0]:
-                    result_text = "Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
-                        converts=results[1][0], cost=results[1][1])
-                elif not results[0]:
-                    result_text = results[1]
-                else:
-                    result_text = "This error should not exist."
-                await ctx.send(result_text)
-                return
+            await ctx.send("Please specify the player to attempt to convert away from. \n"
+                            "Avoid unnecessary whitespaces or characters.")
+            other_player_name = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
+            other_player_name = other_player_name.content
+            results = db.attempt_conversion(player_discord=player_discord,
+                                            quantity=quantity,
+                                            person_type=reactions[emoji],
+                                            other_player_discord=db.get_user_by_name(other_player_name))
+            if results[0]:
+                result_text = "Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
+                    converts=results[1][0], cost=results[1][1])
+            elif not results[0]:
+                result_text = results[1]
             else:
-                result_text = "This should never happen"
-                await ctx.send(result_text)
-                return
-        except TimeoutError:
-            await ctx.send("Timed out")
+                result_text = "This error should not exist."
+            await ctx.send(result_text)
+            return
+        else:
+            result_text = "This should never happen"
+            await ctx.send(result_text)
+            return
+    except TimeoutError:
+        await ctx.send("Timed out")
 
 @bot.command()
 async def help(ctx, *command_context):
