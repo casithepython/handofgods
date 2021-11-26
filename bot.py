@@ -19,7 +19,7 @@ bot.help_command = None
 
 @bot.command()
 async def join(ctx, name: str, *, must_be_none: Optional[str]):
-    if must_be_none is None:
+    if must_be_none is not None:
         await ctx.send("Sorry, player name must be a single word")
         return
     result = db.new_user(name, ctx.author.id)
@@ -44,19 +44,19 @@ async def admin(ctx, *args):
 async def info(ctx, name:str = None, info_type:str = None):
     import formatting
     if name is None:
-        output = "**Current game:**\n\n"
+        output = "> **Current game:**\n> \n> "
         for base_name in db.get_player_names():
             discord = db.get_user_by_name(base_name)
             display_name = db.get_display_name(discord)
-            output += "**{name}**:\n" \
-                      "DP: {power}\n" \
-                      "Functionaries: {funcs}\n" \
-                      "Soldiers: {soldiers}\n" \
-                      "Priests: {priests}\n\n".format(name=name,power=db.get_power(discord),
+            output += "**{name}**:\n> " \
+                      "DP: {power}\n> " \
+                      "Functionaries: {funcs}\n> " \
+                      "Soldiers: {soldiers}\n> " \
+                      "Priests: {priests}\n> \n> ".format(name=display_name,power=db.get_power(discord),
                                                       funcs=db.get_attribute(discord,Attributes.FUNCTIONARIES),
                                                       soldiers=db.get_attribute(discord,Attributes.SOLDIERS),
                                                       priests=db.get_attribute(discord,Attributes.PRIESTS))
-        output += "Current turn: {turn}".format(turn=db.current_turn())
+        output += "> Current turn: {turn}".format(turn=db.current_turn())
         await ctx.send(output)
         return
 
@@ -87,7 +87,7 @@ async def info(ctx, name:str = None, info_type:str = None):
     elif info_type == "tech":
         output_text = "**{name}'s tech:**".format(name=info["display_name"])
         for tech_id in db.get_player_techs(discord_id):
-            output_text += "\n\n{name}:\n"\
+            output_text += "\n> \n> {name}:\n> "\
                            "*{description}*".format(name=db.get_tech_name(tech_id),description=db.get_tech_description(tech_id))
         await ctx.send(output_text)
         return
@@ -111,10 +111,10 @@ async def research(ctx, *, tech_name):
     tech_id = db.get_tech_id(tech_name)
     discord_id = ctx.author.id
     if tech_id is None:
-        await ctx.send('Technology "{}" does not exist.'.format(tech_name))
+        await ctx.send('> Technology "{}" does not exist.'.format(tech_name))
         return
     if discord_id is None:
-        await ctx.send('You have not joined this game yet.')
+        await ctx.send('> You have not joined this game yet.')
         return
     success_cost = db.calculate_tech_cost(discord_id, tech_id)
     multiplier = db.get_attribute(discord_id, Attributes.RESEARCH_COST_MULTIPLIER)
@@ -142,15 +142,15 @@ async def research(ctx, *, tech_name):
         await ctx.send("Timed out")
         return
     
-    priest_text = 'Do you wish to use priests for this research? \n'\
-        ':regional_indicator_y: Yes\n'\
-        ':regional_indicator_n: No'
+    priest_text = '> Do you wish to use priests for this research? \n'\
+        '> :regional_indicator_y: Yes\n'\
+        '> :regional_indicator_n: No'
     use_priests = await user_react_on_message(bot, ctx, priest_text, ctx.author, {
         '\N{REGIONAL INDICATOR SYMBOL LETTER Y}': True,
         '\N{REGIONAL INDICATOR SYMBOL LETTER N}': False
     })
     if use_priests is None:
-        await ctx.send("Timed out")
+        await ctx.send("> Timed out")
         return
     
     result_text = db.attempt_research(discord_id, tech_id, research_method, use_priests)[1]
@@ -167,10 +167,10 @@ async def battle(ctx, player_name: str, quantity: int):
     player_discord = ctx.author.id
     other_player_discord = db.get_user_by_name(player_name)
     if player_discord is None:
-        await ctx.send('You have not joined this game yet.')
+        await ctx.send('> You have not joined this game yet.')
         return
     if other_player_discord is None:
-        await ctx.send('Player "{}" does not exist.'.format(player_name))
+        await ctx.send('> Player "{}" does not exist.'.format(player_name))
         return
     
     expected_outcome = db.expected_damage(player_discord, other_player_discord, quantity)
@@ -191,7 +191,7 @@ async def battle(ctx, player_name: str, quantity: int):
         '\N{REGIONAL INDICATOR SYMBOL LETTER B}': False,
     })
     if do_battle is None:
-        await ctx.send("Timed out")
+        await ctx.send("> Timed out")
         return
 
     if do_battle:
@@ -210,13 +210,13 @@ async def battle(ctx, player_name: str, quantity: int):
                 remaining_attackers
             )
             
-            await ctx.send(result_text)
+            await ctx.send(">" + result_text)
             return
         else:
-            await ctx.send(results[1])
+            await ctx.send(">" + str(results[1]))
             return
     else:
-        await ctx.send("Battle canceled.")
+        await ctx.send("> Battle canceled.")
         return
 
 
@@ -227,7 +227,7 @@ async def convert(ctx, quantity: int):
     player_discord = ctx.author.id
 
     if player_discord is None:
-        await ctx.send('You have not joined this game yet.')
+        await ctx.send('> You have not joined this game yet.')
         return
 
     output_text = formatting.conversion_target_type(
@@ -251,7 +251,7 @@ async def convert(ctx, quantity: int):
                                         person_type=conversion_target,
                                         other_player_discord=None)
         if results[0]:
-            result_text = "Successfully converted {converts}.".format(converts=results[1])
+            result_text = "> Successfully converted {converts}.".format(converts=results[1])
         else:
             result_text = results[1]
         await ctx.send(result_text)
@@ -260,7 +260,7 @@ async def convert(ctx, quantity: int):
         def check(message):
             return message.author.id == ctx.author.id and db.user_name_exists(message.content)
         
-        await ctx.send("Please specify the player to attempt to convert away from. \n"
+        await ctx.send("> Please specify the player to attempt to convert away from. \n"
                         "Avoid unnecessary whitespaces or characters.")
         other_player_name = (await bot.wait_for('message', timeout=30.0, check=check)).content
         other_player_id = db.get_user_by_name(other_player_name)
@@ -271,7 +271,7 @@ async def convert(ctx, quantity: int):
                                         other_player_discord=other_player_id)
 
         if success:
-            result_text = "Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
+            result_text = "> Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
                 converts=results[0], cost=results[1])
         else:
             result_text = results
@@ -289,7 +289,7 @@ def start_bot():
         logging.info("Starting client")
         bot.run(token)
     else:
-        logging.error("Could not start: invalid token")
+        logging.error("> Could not start: invalid token")
 
 
 if __name__ == '__main__':

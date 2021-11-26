@@ -2,19 +2,19 @@ import main as db
 import Attributes
 
 def default_info(info, discord_id):
-  return  "**"+str(info["display_name"]) + ":**\n" + \
-          "Pantheon: " + str(db.get_pantheon_name(info["pantheon"])) + "\n" + \
-          "Soldiers: " + str(db.get_army(discord_id)) + "\n"+\
-          "Functionaries: " + str(db.get_attribute(discord_id,Attributes.FUNCTIONARIES)) + "\n"+ \
-          "Priests: " + str(db.get_attribute(discord_id,Attributes.PRIESTS)) + "\n\n"+ \
-          "**Battle statistics:**\n" + \
-          "Attack: " + str(db.get_attribute(discord_id,Attributes.ATTACK)) + "\n" + \
-          "Defense: " + str(db.get_attribute(discord_id, Attributes.DEFENSE)) + "\n" + \
-          "Armor: " + str(db.get_attribute(discord_id, Attributes.ARMOR)) + "\n" + \
-          "Initiative: " + str(db.get_attribute(discord_id, Attributes.INITIATIVE)) + "\n\n" + \
-          "**Power:**\n" + \
-          "Current DP: " + str(db.get_attribute(discord_id,Attributes.POWER)) + "\n"\
-          "Income: " + str(db.calculate_income(discord_id)) + "\n"\
+  return  "> **"+str(info["display_name"]) + ":**\n> " + \
+          "Pantheon: " + str(db.get_pantheon_name(info["pantheon"])) + "\n> " + \
+          "Soldiers: " + str(db.get_army(discord_id)) + "\n> "+\
+          "Functionaries: " + str(db.get_attribute(discord_id,Attributes.FUNCTIONARIES)) + "\n> "+ \
+          "Priests: " + str(db.get_attribute(discord_id,Attributes.PRIESTS)) + "\n> \n> "+ \
+          "**Battle statistics:**\n> " + \
+          "Attack: " + str(db.get_attribute(discord_id,Attributes.ATTACK)) + "\n> " + \
+          "Defense: " + str(db.get_attribute(discord_id, Attributes.DEFENSE)) + "\n> " + \
+          "Armor: " + str(db.get_attribute(discord_id, Attributes.ARMOR)) + "\n> " + \
+          "Initiative: " + str(db.get_attribute(discord_id, Attributes.INITIATIVE)) + "\n> \n> " + \
+          "**Power:**\n> " + \
+          "Current DP: " + str(db.get_attribute(discord_id,Attributes.POWER)) + "\n> "\
+          "Income: " + str(db.calculate_income(discord_id)) + "\n> "\
           "Remaining Priest Channeling Power: " + str(db.get_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER))
 
 def income_info(info, discord_id):
