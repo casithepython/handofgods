@@ -115,8 +115,8 @@ async def create(ctx,amount:int, type:str):
         discord_id=ctx.author.id
         from user_interaction import user_react_on_message
         if type in ["priests", "priest"]:
-            output = "> You are creating {num} priests at a cost of {cost:.0f} per priest, for " \
-                     "a total of {total} DP." \
+            output = "> You are creating {num:.0f} priests at a cost of {cost:.0f} per priest, for " \
+                     "a total of {total:.0f} DP." \
                      "Do you wish to continue?\n> \n> " \
                      ":thumbsup: Yes\n> " \
                      ":thumbsdown: No".format(num=amount,cost=db.get_attribute(discord_id,Attributes.PRIEST_COST),
@@ -136,8 +136,8 @@ async def create(ctx,amount:int, type:str):
                 return
 
         elif type in ["soldiers", "soldier", "troops"]:
-            output = "> You are creating {num} soldiers at a cost of {cost:.0f} per soldier, for " \
-                     "a total of {total} DP." \
+            output = "> You are creating {num:.0f} soldiers at a cost of {cost:.0f} per soldier, for " \
+                     "a total of {total:.0f} DP." \
                      "Do you wish to continue?\n> \n> " \
                      ":thumbsup: Yes\n> " \
                      ":thumbsdown: No".format(num=amount, cost=db.get_attribute(discord_id, Attributes.SOLDIER_COST),
