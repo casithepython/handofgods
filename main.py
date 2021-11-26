@@ -171,8 +171,27 @@ def new_user(name, discord_id):
         return False, "User or discord id already in system."
 
 
+def get_user(discord_id):
+    info = get_player_info(discord_id)
+    return {"id":info[0],
+            "name":info[1],
+            "display_name":info[2],
+            "discord_id":info[3],
+            "pantheon":info[4],
+            "attributes":[(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in range(get_num_attributes())]}
+
+
 def get_player_id(discord_id):
     return get_player_id_from_discord_id(discord_id)
+
+
+def get_player_attributes(discord_id)
+def get_player_info(discord_id):
+    info = []
+    with connect() as cursor:
+        for value in cursor.fetchone():
+            info.append(value)
+    return info
 
 
 def get_discord_ids():
@@ -273,7 +292,22 @@ def get_attribute(discord_id, attribute_id):
         value = cursor.fetchone()[0]
     return value
 
+def get_attribute_name(attribute_id):
+    name = None
+    with connect() as cursor:
+        cursor.execute("SELECT name FROM attributes WHERE id = ?",(attribute_id,))
+        name = cursor.fetchone()[0]
 
+    return name
+
+
+def get_num_attributes():
+    num = None
+    with connect() as cursor:
+        cursor.execute("SELECT id FROM attributes")
+
+        num = len(cursor.fetchall())
+    return num
 # ----------------------------------------
 # Tech
 # ----------------------------------------
