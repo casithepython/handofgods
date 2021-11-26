@@ -42,7 +42,22 @@ async def admin(ctx, *args):
 async def info(ctx, name:str, info_type:str = None):
     import formatting
     if name is None:
-        name = ctx.author.name
+        output = "**Current game:**\n\n"
+        for name in db.get_player_names():
+            discord = db.get_user_by_name(name)
+            output += "**{name}**:\n" \
+                      "DP: {power}\n" \
+                      "Functionaries: {funcs}\n" \
+                      "Soldiers: {soldiers}\n" \
+                      "Priests: {priests}\n\n".format(name=name,power=db.get_power(discord),
+                                                      funcs=db.get_attribute(discord,Attributes.FUNCTIONARIES),
+                                                      soldiers=db.get_attribute(discord,Attributes.SOLDIERS),
+                                                      priests=db.get_attribute(discord,Attributes.PRIESTS))
+        output += "Current turn: {turn}".format(turn=db.current_turn())
+        await ctx.send(output)
+        return
+
+
 
     discord_id = db.get_user_by_name(name)
     info = db.get_player(discord_id)

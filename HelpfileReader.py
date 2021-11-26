@@ -33,7 +33,7 @@ def read_index(command_context: Optional[Tuple[str, ...]], command: dict, force_
   else:
     return None
 
-def format_command(command_context: Optional[Tuple[str, ...]], parameters: Optional[list[str]], has_subcommands: bool) -> Optional[str]:
+def format_command(command_context, parameters, has_subcommands):
   if command_context is None or len(command_context) == 0:
     return '{index}'
   elif parameters is None:

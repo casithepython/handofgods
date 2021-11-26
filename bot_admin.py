@@ -6,6 +6,8 @@ async def tech(bot, ctx, *args):
         pass
     elif args[0] == "delete":
         pass
+    elif args[0] == "newturn":
+        return await newturn()
 
 async def tech_create(bot, ctx, *args):
     async def _get_bonuses():
@@ -59,3 +61,6 @@ async def tech_create(bot, ctx, *args):
 
     output = db.new_tech(name,description,cost,bonuses,prerequisites,multiplier)
     await ctx.send(output[1])
+
+async def newturn():
+    return db.new_turn(), str(db.current_turn())
