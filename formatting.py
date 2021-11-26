@@ -16,7 +16,7 @@ def default_info(info, discord_id):
           "**Power:**\n> " \
           "Current DP: {power:.0f}\n> " \
           "Income: {income:.0f}\n> " \
-          "Remaining Priest Channeling Power: {channel}".format(
+          "Remaining Priest Channeling Power: {channel:.0f}".format(
             display_name=info["display_name"],
             pantheon=db.get_pantheon_name(info["pantheon"]),
             soldiers=db.get_army(discord_id),
@@ -101,7 +101,7 @@ def conversion_info(info, discord_id):
           "Enemy priest conversion: {priest_convert_rate:.1%}, {priest_convert_cost:.0f} DP \n" \
           "Neutral conversion: {neutral_rate:.1%}, {neutral_cost:.0f} DP \n\n" \
           "Priest cost: {priest_cost:.0f} \n" \
-          "Max priest channeling per turn: {channeling} \n".format(
+          "Max priest channeling per turn: {channeling:.0f} \n".format(
             name=info["display_name"],
             enemy_rate=int(db.get_attribute(discord_id, Attributes.ENEMY_CONVERSION_RATE)),
             enemy_cost=int(db.get_attribute(discord_id, Attributes.ENEMY_CONVERSION_COST)),
@@ -136,7 +136,7 @@ def research_info(info, discord_id):
           )
 
 def request_research_method(tech_name, success_probs, success_cost, attempt_costs):
-  return  'Attempt research of the technology "{tech_name}" (success cost {success_cost}):\n' \
+  return  'Attempt research of the technology "{tech_name}" (success cost {success_cost:.0f}):\n' \
           ':regional_indicator_a: for divine inspiration (success probability {success_probs[0]:.1%}, attempt cost {attempt_costs[0]:.0f})\n' \
           ':regional_indicator_b: for waking revelation (success probability {success_probs[1]:.1%}, attempt cost {attempt_costs[1]:.0f})\n' \
           ':regional_indicator_c: for dream revelation (success probability {success_probs[2]:.1%}, attempt cost {attempt_costs[2]:.0f})\n' \
