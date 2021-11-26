@@ -54,7 +54,7 @@ async def info(ctx, name:str = None, info_type:str = None):
                                                       funcs=db.get_attribute(discord,Attributes.FUNCTIONARIES),
                                                       soldiers=db.get_attribute(discord,Attributes.SOLDIERS),
                                                       priests=db.get_attribute(discord,Attributes.PRIESTS))
-        output += "> Current turn: {turn}".format(turn=db.current_turn())
+        output += "Current turn: {turn}".format(turn=db.current_turn())
         await ctx.send(output)
         return
 
