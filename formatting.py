@@ -32,7 +32,7 @@ def default_info(info, discord_id):
           )
 
 def income_info(info, discord_id):
-  return  "**{display_name}\'s income:**\n" + \
+  return  "**{display_name}\'s income:**\n" \
           "Total DP: {total_dp:.0f}\n\n" \
           "Income per functional: {income_per_functional:.0f}\n"\
           "Income per soldier: {income_per_soldier:.0f}\n"\
@@ -45,7 +45,7 @@ def income_info(info, discord_id):
           " DP for every unit of bonus income, up to a maximum of " \
           "{priest_income_boost_capacity:.0f} per priest, or "\
           "{total_boost_capacity:.0f} total.\n\n"\
-          "Total income per turn: {total_income_per_turn:.0f}\n\n" + \
+          "Total income per turn: {total_income_per_turn:.0f}\n\n" \
           "Passive population growth rate: {pop_growth_rate:.0%}/turn"\
             .format(
               display_name=info["display_name"],
