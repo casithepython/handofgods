@@ -95,7 +95,7 @@ def new_user(name, discord_id):
             # Attributes.PRIESTS: 0,
             # Attributes.SOLDIERS: 0,
             Attributes.FUNCTIONARIES: 1000,
-            # Attributes.POWER: 0,
+            Attributes.POWER: 1000,
             # Attributes.TOTAL_CONVERTED: 0,
             # Attributes.TOTAL_POACHED: 0,
             # Attributes.TOTAL_DESTROYED: 0,
