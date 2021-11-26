@@ -31,23 +31,39 @@ def default_info(info, discord_id):
           )
 
 def income_info(info, discord_id):
-  return  "**" + str(info["display_name"]) + "\'s income:**\n" + \
-          "Total DP: " + str(int(db.get_attribute(discord_id, Attributes.POWER))) + "\n\n" \
-          "Income per functional: " + str(db.get_attribute(discord_id,Attributes.INCOME_PER_FUNCTIONAL)) + "\n"\
-          "Income per soldier: " + str(db.get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER)) + "\n"\
-          "Income per priest: " + str(db.get_attribute(discord_id, Attributes.INCOME_PER_PRIEST)) + "\n"\
-          "Base income per turn: " + str(db.get_attribute(discord_id,Attributes.INCOME_PER_FUNCTIONAL)+
-                                          db.get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER)+
-                                          db.get_attribute(discord_id, Attributes.INCOME_PER_PRIEST))+"\n\n"\
-          "Bonus income per functional: " + str(db.get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL)) + "\n"\
-          "Bonus income per soldier: " + str(db.get_attribute(discord_id, Attributes.BONUS_POWER_PER_SOLDIER)) + "\n"\
-          "Bonus income per priest: " + str(db.get_attribute(discord_id, Attributes.BONUS_POWER_PER_PRIEST)) + "\n"\
-          "Priest income boost: " + str(db.get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE)) + \
-          " DP for every unit of bonus income, up to a maximum of " + \
-          str(db.get_attribute(discord_id,Attributes.PRIEST_INCOME_BOOST_CAPACITY)) + " per priest, or " + \
-          str(db.get_attribute(discord_id,Attributes.PRIESTS)* db.get_attribute(discord_id,Attributes.PRIEST_INCOME_BOOST_CAPACITY)) + " total.\n\n" +\
-          "Total income per turn: " + str(int(db.calculate_income(discord_id))) + "\n\n" + \
-          "Passive population growth rate: " + str(db.get_attribute(discord_id,Attributes.PASSIVE_POPULATION_GROWTH_RATE)*100) + "%/turn"
+  return  "**{display_name}\'s income:**\n" + \
+          "Total DP: {total_dp:.0f}\n\n" \
+          "Income per functional: {income_per_functional:.0f}\n"\
+          "Income per soldier: {income_per_soldier:.0f}\n"\
+          "Income per priest: {income_per_priest:.0f}\n"\
+          "Base income per turn: {base_income_per_turn:.0f}\n\n"\
+          "Bonus income per functional: {bonus_income_per_functional:.0f}\n"\
+          "Bonus income per soldier: {bonus_income_per_soldier:.0f}\n"\
+          "Bonus income per priest: {bonus_income_per_priest:.0f}\n"\
+          "Priest income boost: {priest_income_boost_rate:.0f}"\
+          " DP for every unit of bonus income, up to a maximum of " \
+          "{priest_income_boost_capacity:.0f} per priest, or "\
+          "{total_boost_capacity:.0f} total.\n\n"\
+          "Total income per turn: {total_income_per_turn:.0f}\n\n" + \
+          "Passive population growth rate: {pop_growth_rate:.0%}/turn"\
+            .format(
+              display_name=info["display_name"],
+              total_dp=db.get_attribute(discord_id, Attributes.POWER),
+              income_per_functional=db.get_attribute(discord_id,Attributes.INCOME_PER_FUNCTIONAL),
+              income_per_soldier=db.get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER),
+              income_per_priest=db.get_attribute(discord_id, Attributes.INCOME_PER_PRIEST),
+              base_income_per_turn=db.get_attribute(discord_id,Attributes.INCOME_PER_FUNCTIONAL) +
+                                    db.get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER) +
+                                    db.get_attribute(discord_id, Attributes.INCOME_PER_PRIEST),
+              bonus_income_per_functional=db.get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL),
+              bonus_income_per_soldier=db.get_attribute(discord_id, Attributes.BONUS_POWER_PER_SOLDIER),
+              bonus_income_per_priest=db.get_attribute(discord_id, Attributes.BONUS_POWER_PER_PRIEST),
+              priest_income_boost_rate=db.get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE),
+              priest_income_boost_capacity=db.get_attribute(discord_id,Attributes.PRIEST_INCOME_BOOST_CAPACITY),
+              total_boost_capacity=db.get_attribute(discord_id,Attributes.PRIESTS)* db.get_attribute(discord_id,Attributes.PRIEST_INCOME_BOOST_CAPACITY),
+              total_income_per_turn=db.calculate_income(discord_id),
+              pop_growth_rate=db.get_attribute(discord_id,Attributes.PASSIVE_POPULATION_GROWTH_RATE)
+            )
 
 def war_info(info, discord_id):
   return  "**{name}'s army:**\n" \
