@@ -111,6 +111,7 @@ def new_user(name, discord_id):
             Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0,
             Attributes.TOTAL_PRIEST_POWER: 0,
             Attributes.PRIEST_INCOME_BOOST_RATE: 5,
+            Attributes.DP_BUFF_POINTS: 0,
             Attributes.DP_BUFF_COST_MULTIPLIER: 0.01
         }
         for attribute_id, value in defaults.items():
@@ -691,16 +692,7 @@ def get_pantheon_name(pantheon_id):
 # Battles
 # ----------------------------------------
 
-def cast_buff(discord_id, attribute_id, amount):
-    # Phase 1: Assertions
-    if attribute_id not in {Attributes.ATTACK, Attributes.DEFENSE, Attributes.ARMOR, Attributes.INITIATIVE}:
-        return None
-    if not user_discord_id_exists(discord_id):
-        return None
-    if not attribute_exists(attribute_id):
-        return None
-
-    # Phase 2: Calculate cost
+def get_buff_cost(discord_id,amount):
     casting_cost = 0
     buffed_amount = get_attribute(discord_id, Attributes.DP_BUFF_POINTS)
     soldier_count = get_attribute(discord_id, Attributes.SOLDIERS)
@@ -708,18 +700,32 @@ def cast_buff(discord_id, attribute_id, amount):
     for i in range(amount):
         casting_cost += 2 ** buffed_amount
         buffed_amount += 1
-    
     casting_cost = int(casting_cost * soldier_count * buff_cost_multiplier)
+    print(casting_cost)
+    return casting_cost
 
+
+def cast_buff(discord_id, attribute_id, amount):
+    # Phase 1: Assertions
+    if attribute_id not in {Attributes.ATTACK, Attributes.DEFENSE, Attributes.ARMOR, Attributes.INITIATIVE}:
+        return False, "Incorrect attribute. Must be attack, defense, armor, or initiative."
+    if not user_discord_id_exists(discord_id):
+        return False, "User invalid"
+    if not attribute_exists(attribute_id):
+        return False, "Attribute does not exist."
+
+    # Phase 2: Calculate cost
+    casting_cost = get_buff_cost(discord_id,attribute_id,amount)
     if get_power(discord_id) < casting_cost:
-        return False # Not enough power
+        return False, "Not enough power"
 
     # Phase 3: Increase cost and spend DP
     turn = current_turn()
     spend_power(discord_id, casting_cost)
     increase_attribute(discord_id, Attributes.DP_BUFF_POINTS, amount, turn)
     increase_attribute(discord_id, attribute_id, amount, turn)
-    return True # Enough power
+    return True, "Successfully buffed {name} by {amount}".format(name=get_attribute_name(attribute_id), amount=amount)
+
 
 def attack(discord_id, other_player_id, quantity):
     if not user_discord_id_exists(discord_id):
@@ -920,7 +926,7 @@ def recruit_priests(discord_id, quantity):
 
     new_channeling_power = get_attribute(discord_id,Attributes.MAXIMUM_PRIEST_CHANNELING)*quantity
     increase_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER,new_channeling_power,NEVER_EXPIRES)
-    return True, "Successfully added {priests:.0} priests".format(priests=quantity)
+    return True, "Successfully added {priests} priests".format(priests=quantity)
 
 # new_user("casi", 466015764919353346)
 # complete_research(1, 1)

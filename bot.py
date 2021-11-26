@@ -19,6 +19,11 @@ bot.help_command = None
 
 
 @bot.command()
+async def gpl(ctx):
+    await ctx.send("This bot is available under the GPL license, and the source code can be found at https://github.com/casithepython/handofgods")
+    return
+
+@bot.command()
 async def join(ctx, name: str, *, must_be_none: Optional[str]):
     if must_be_none is not None:
         await ctx.send("Sorry, player name must be a single word")
@@ -108,6 +113,45 @@ async def info(ctx, name:str = None, info_type:str = None):
             await ctx.send(output_text)
 
         return
+
+
+@bot.command()
+async def buff(ctx,name:str, attribute:str, amount:int = 1):
+    from user_interaction import user_react_on_message
+    discord_id = None
+    if name == "me":
+        discord_id = ctx.author.id
+    else:
+        discord_id = db.get_user_by_name(name)
+    try:
+        attribute_id = db.get_attribute_id(attribute)
+    except:
+        await ctx.send("Incorrect attribute.")
+        return
+
+    if db.get_attribute(discord_id,Attributes.SOLDIERS) > 0:
+        cost = db.get_buff_cost(discord_id, amount)
+        output = f"> You are attempting to buff {attribute} by {amount}. This will cost you {cost} DP.\n> " \
+                 f"Do you wish to continue?\n> " \
+                 f":thumbsup: Yes\n> " \
+                 f":thumbsdown: No"
+        do_buff = await user_react_on_message(bot, ctx, output, ctx.author, {
+            '\N{THUMBS UP SIGN}': True,
+            '\N{THUMBS DOWN SIGN}': False,
+        })
+
+        if do_buff:
+            results = db.cast_buff(discord_id, attribute_id,amount)
+            await ctx.send(results[1])
+            return
+
+        else:
+            await ctx.send("Canceled.")
+            return
+    else:
+        await ctx.send("You have no soldiers.")
+        return
+
 
 @bot.command()
 async def create(ctx,amount:int, type:str):
