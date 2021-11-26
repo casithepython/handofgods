@@ -11,8 +11,8 @@ from typing import Optional
 debug_mode = True
 
 research_cache = {}
-
-bot = commands.Bot(command_prefix="?")
+PREFIX = "?"
+bot = commands.Bot(command_prefix=PREFIX)
 
 
 @bot.command()
