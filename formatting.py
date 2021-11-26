@@ -153,3 +153,19 @@ def battle_ask_continue(other_player_name, quantity, probability, expected_soldi
         expected_priests=expected_priests,
         expected_loss=expected_loss
     )
+
+def conversion_target_type(neutral_success_rate, neutral_cost, enemy_success_rate, enemy_cost, priest_success_rate, priest_cost):
+  return  'What type of people do you want to convert?\n' \
+          ':regional_indicator_a: Neutrals (Success rate {neutral_success_rate:.1%},' \
+          ' Cost {neutral_cost})\n' \
+          ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, ' \
+          'Cost {enemy_cost})\n' \
+          ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%},' \
+          ' Cost {priest_cost})\n'.format(
+            neutral_success_rate=neutral_success_rate,
+            neutral_cost=neutral_cost,
+            enemy_success_rate=enemy_success_rate,
+            enemy_cost=enemy_cost,
+            priest_success_rate=priest_success_rate,
+            priest_cost=priest_cost
+          )

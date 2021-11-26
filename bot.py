@@ -207,29 +207,22 @@ async def battle(ctx, player_name: str, quantity: int):
 @bot.command()
 async def convert(ctx, quantity: int):
     from user_interaction import user_react_on_message
+    import formatting
     player_discord = ctx.author.id
 
     if player_discord is None:
         await ctx.send('You have not joined this game yet.')
         return
 
-    # Phase 1: output text
-    output_text = 'What type of people do you want to convert?\n' \
-                    ':regional_indicator_a: Neutrals (Success rate {neutral_success_rate:.1%},' \
-                    ' Cost {neutral_cost})\n' \
-                    ':regional_indicator_b: Enemy Followers (Success rate {enemy_success_rate:.1%}, ' \
-                    'Cost {enemy_cost})\n' \
-                    ':regional_indicator_c: Enemy Priests (Success rate {priest_success_rate:.1%},' \
-                    ' Cost {priest_cost})\n' \
-        .format(neutral_success_rate=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE),
-                neutral_cost=db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST),
-                enemy_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE),
-                enemy_cost=db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST),
-                priest_success_rate=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE),
-                priest_cost=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST),
-                )
+    output_text = formatting.conversion_target_type(
+        db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE),
+        db.get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST),
+        db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE),
+        db.get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST),
+        db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE),
+        db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST)
+    )
 
-    
     conversion_target = user_react_on_message(bot, ctx, output_text, ctx.author, {
         '\N{REGIONAL INDICATOR SYMBOL LETTER A}': "neutral",
         '\N{REGIONAL INDICATOR SYMBOL LETTER B}': "enemy",
@@ -248,35 +241,26 @@ async def convert(ctx, quantity: int):
         await ctx.send(result_text)
         return
     elif conversion_target in ["enemy", "enemy_priest"]:
-        def check_author(author):
-            def inner_check(message):
-                if message.author.id != ctx.author.id:
-                    return False
-                return True
-
-            return inner_check
-
+        def check(message):
+            return message.author.id == ctx.author.id and db.user_name_exists(message.content)
+        
         await ctx.send("Please specify the player to attempt to convert away from. \n"
                         "Avoid unnecessary whitespaces or characters.")
-        other_player_name = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-        other_player_name = other_player_name.content
-        results = db.attempt_conversion(player_discord=player_discord,
+        other_player_name = (await bot.wait_for('message', timeout=30.0, check=check)).content
+        other_player_id = db.get_user_by_name(other_player_name)
+
+        success, results = db.attempt_conversion(player_discord=player_discord,
                                         quantity=quantity,
                                         person_type=conversion_target,
-                                        other_player_discord=db.get_user_by_name(other_player_name))
-        if results[0]:
+                                        other_player_discord=other_player_id)
+
+        if success:
             result_text = "Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
-                converts=results[1][0], cost=results[1][1])
-        elif not results[0]:
-            result_text = results[1]
+                converts=results[0], cost=results[1])
         else:
-            result_text = "This error should not exist."
+            result_text = results
+        
         await ctx.send(result_text)
-        return
-    else:
-        result_text = "This should never happen"
-        await ctx.send(result_text)
-        return
 
 @bot.command()
 async def help(ctx, *command_context):
