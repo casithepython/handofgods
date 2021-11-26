@@ -187,12 +187,13 @@ def get_player_id(discord_id):
 
 
 def get_player_attributes(discord_id):
-    return [(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in range(get_num_attributes())]
+    return [(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in range(1,get_num_attributes()+1)]
 
 
 def get_player_info(discord_id):
     info = []
     with connect() as cursor:
+        cursor.execute("SELECT * FROM players WHERE discord_id = ?",(discord_id,))
         for value in cursor.fetchone():
             info.append(value)
     return info
@@ -301,7 +302,6 @@ def get_attribute_name(attribute_id):
     with connect() as cursor:
         cursor.execute("SELECT name FROM attributes WHERE id = ?",(attribute_id,))
         name = cursor.fetchone()[0]
-
     return name
 
 
@@ -395,10 +395,18 @@ def get_tech_id(name):
     return tech_id
 
 
+def get_tech_description(tech_id):
+    description = None
+    with connect() as cursor:
+        cursor.execute("SELECT description from technologies WHERE id = ?", (tech_id,))
+        description = cursor.fetchone()[0]
+    return description
+
+
 def get_tech_name(tech_id):
     name = None
     with connect() as cursor:
-        cursor.execute("SELECT name from technologies WHERE id = ?", (tech_id,))
+        cursor.execute("SELECT display_name from technologies WHERE id = ?", (tech_id,))
         name = cursor.fetchone()[0]
     return name
 
