@@ -3,8 +3,8 @@ import Attributes
 
 def default_info(info, discord_id):
   print(info)
-  return  "> **"+info["display_name"]+":**\n> " \
-          "Pantheon: {pantheon}\n> " + \
+  return  "> **{display_name}:**\n> " \
+          "Pantheon: {pantheon}\n> " \
           "Soldiers: {soldiers:.0f}\n> " \
           "Functionaries: {functionaries:.0f}\n> " \
           "Priests: \n> \n> " \
@@ -17,6 +17,7 @@ def default_info(info, discord_id):
           "Current DP: {power:.0f}\n> " \
           "Income: {income:.0f}\n> " \
           "Remaining Priest Channeling Power: {channel}".format(
+            display_name=info["display_name"],
             pantheon=db.get_pantheon_name(info["pantheon"]),
             soldiers=db.get_army(discord_id),
             functionaries=db.get_attribute(discord_id,Attributes.FUNCTIONARIES),
