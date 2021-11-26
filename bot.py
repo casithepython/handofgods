@@ -54,14 +54,14 @@ async def info(ctx, name:str = None, info_type:str = None):
             discord = db.get_user_by_name(base_name)
             display_name = db.get_display_name(discord)
             output += "**{name}**:\n> " \
-                      "DP: {power}\n> " \
-                      "Functionaries: {funcs}\n> " \
-                      "Soldiers: {soldiers}\n> " \
-                      "Priests: {priests}\n> \n> ".format(name=display_name,power=db.get_attribute(discord,Attributes.POWER),
+                      "DP: {power:.0f}\n> " \
+                      "Functionaries: {funcs:.0f}\n> " \
+                      "Soldiers: {soldiers:.0f}\n> " \
+                      "Priests: {priests:.0f}\n> \n> ".format(name=display_name,power=db.get_attribute(discord,Attributes.POWER),
                                                       funcs=db.get_attribute(discord,Attributes.FUNCTIONARIES),
                                                       soldiers=db.get_attribute(discord,Attributes.SOLDIERS),
                                                       priests=db.get_attribute(discord,Attributes.PRIESTS))
-        output += "Current turn: {turn}".format(turn=db.current_turn())
+        output += "Current turn: {turn:.0f}".format(turn=db.current_turn())
         await ctx.send(output)
         return
 
