@@ -864,13 +864,13 @@ def recruit_soldiers(discord_id, quantity):
     # Phase 2: Actually changing stuff
     functionary_count = get_attribute(discord_id, Attributes.FUNCTIONARIES)
     if functionary_count < quantity:
-        return False # Impossible: not enough functionaries
+        return False , "Impossible: not enough functionaries"
     
     dp_cost = get_attribute(discord_id, Attributes.SOLDIER_COST) * quantity
     power = get_power(discord_id)
 
     if power < dp_cost: 
-        return False # Impossible: not enough power
+        return False , "Impossible: not enough power"
 
     spend_power(discord_id, dp_cost)
     increase_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
@@ -886,13 +886,13 @@ def disband_soldiers(discord_id, quantity):
     # Phase 2: Actually changing stuff
     soldier_count = get_attribute(discord_id, Attributes.SOLDIERS)
     if soldier_count < quantity:
-        return False # Impossible: not enough soldiers
+        return False ,  "Impossible: not enough soldiers"
     
     dp_cost = get_attribute(discord_id, Attributes.SOLDIER_DISBAND_COST) * quantity
     power = get_power(discord_id)
 
     if power < dp_cost:
-        return False # Impossible: not enough power
+        return False , "Impossible: not enough power"
     
     spend_power(discord_id, dp_cost)
     increase_attribute(discord_id, Attributes.SOLDIERS, -quantity, NEVER_EXPIRES)
@@ -901,23 +901,23 @@ def disband_soldiers(discord_id, quantity):
 
 def recruit_priests(discord_id, quantity):
     if not user_discord_id_exists(discord_id):
-        return None
+        return False, "User doesn't exist"
     quantity = int(quantity)
 
     functionary_count = get_attribute(discord_id, Attributes.FUNCTIONARIES)
     if functionary_count < quantity:
-        return False # Impossible: not enough functionaries
+        return False , "Impossible: not enough functionaries"
     
     dp_cost = get_attribute(discord_id, Attributes.PRIEST_COST) * quantity
     power = get_power(discord_id)
 
     if power < dp_cost:
-        return False # Impossible: not enough power
+        return False, "Impossible: not enough power"
     
     spend_power(discord_id, dp_cost)
     increase_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
     increase_attribute(discord_id, Attributes.PRIESTS, quantity, NEVER_EXPIRES)
-    return True
+    return True, "Successfully added {priests:.0} priests".format(priests=quantity)
 
 # new_user("casi", 466015764919353346)
 # complete_research(1, 1)

@@ -2,7 +2,6 @@ import main as db
 import Attributes
 
 def default_info(info, discord_id):
-  print(info)
   return  "> **{display_name}:**\n> " \
           "Pantheon: {pantheon}\n> " \
           "Soldiers: {soldiers:.0f}\n> " \
