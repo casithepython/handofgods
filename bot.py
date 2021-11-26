@@ -206,6 +206,7 @@ async def battle(ctx, player_name: str, quantity: int):
 
 @bot.command()
 async def convert(ctx, quantity: int):
+    from user_interaction import user_react_on_message
     player_discord = ctx.author.id
 
     if player_discord is None:
@@ -228,77 +229,54 @@ async def convert(ctx, quantity: int):
                 priest_cost=db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST),
                 )
 
-    message = await ctx.send(output_text)
-    reactions = {
+    
+    conversion_target = user_react_on_message(bot, ctx, output_text, ctx.author, {
         '\N{REGIONAL INDICATOR SYMBOL LETTER A}': "neutral",
         '\N{REGIONAL INDICATOR SYMBOL LETTER B}': "enemy",
         '\N{REGIONAL INDICATOR SYMBOL LETTER C}': "enemy_priest",
-    }
-    for reaction in reactions.keys():
-        await message.add_reaction(reaction)
+    })
 
-    def check(reaction, user):
-        if str(reaction.emoji) not in reactions:
-            return False
-        if user.id != ctx.author.id:
-            return False
-        if reaction.message.id != message.id:
-            return False
-        return True
-
-    try:
-
-        user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
-        emoji = str(user_reaction.emoji)
-
-        # wait for reaction from correct player
-        for reaction in reactions.keys():
-            if reaction != emoji:
-                await message.remove_reaction(reaction, ctx.me)
-
-        if reactions[emoji] == "neutral":
-            results = db.attempt_conversion(player_discord=player_discord,
-                                            quantity=quantity,
-                                            person_type=reactions[emoji],
-                                            other_player_discord=None)
-            if results[0]:
-                result_text = "Successfully converted {converts}.".format(converts=results[1])
-            else:
-                result_text = results[1]
-            await ctx.send(result_text)
-            return
-        elif reactions[emoji] in ["enemy", "enemy_priest"]:
-            def check_author(author):
-                def inner_check(message):
-                    if message.author.id != ctx.author.id:
-                        return False
-                    return True
-
-                return inner_check
-
-            await ctx.send("Please specify the player to attempt to convert away from. \n"
-                            "Avoid unnecessary whitespaces or characters.")
-            other_player_name = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-            other_player_name = other_player_name.content
-            results = db.attempt_conversion(player_discord=player_discord,
-                                            quantity=quantity,
-                                            person_type=reactions[emoji],
-                                            other_player_discord=db.get_user_by_name(other_player_name))
-            if results[0]:
-                result_text = "Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
-                    converts=results[1][0], cost=results[1][1])
-            elif not results[0]:
-                result_text = results[1]
-            else:
-                result_text = "This error should not exist."
-            await ctx.send(result_text)
-            return
+    if conversion_target == "neutral":
+        results = db.attempt_conversion(player_discord=player_discord,
+                                        quantity=quantity,
+                                        person_type=conversion_target,
+                                        other_player_discord=None)
+        if results[0]:
+            result_text = "Successfully converted {converts}.".format(converts=results[1])
         else:
-            result_text = "This should never happen"
-            await ctx.send(result_text)
-            return
-    except TimeoutError:
-        await ctx.send("Timed out")
+            result_text = results[1]
+        await ctx.send(result_text)
+        return
+    elif conversion_target in ["enemy", "enemy_priest"]:
+        def check_author(author):
+            def inner_check(message):
+                if message.author.id != ctx.author.id:
+                    return False
+                return True
+
+            return inner_check
+
+        await ctx.send("Please specify the player to attempt to convert away from. \n"
+                        "Avoid unnecessary whitespaces or characters.")
+        other_player_name = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
+        other_player_name = other_player_name.content
+        results = db.attempt_conversion(player_discord=player_discord,
+                                        quantity=quantity,
+                                        person_type=conversion_target,
+                                        other_player_discord=db.get_user_by_name(other_player_name))
+        if results[0]:
+            result_text = "Successfully converted {converts}, spending {cost} DP and priest channeling power.".format(
+                converts=results[1][0], cost=results[1][1])
+        elif not results[0]:
+            result_text = results[1]
+        else:
+            result_text = "This error should not exist."
+        await ctx.send(result_text)
+        return
+    else:
+        result_text = "This should never happen"
+        await ctx.send(result_text)
+        return
 
 @bot.command()
 async def help(ctx, *command_context):
