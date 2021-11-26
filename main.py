@@ -7,6 +7,7 @@ from flask import Flask
 
 app = Flask(__name__)
 
+NEVER_EXPIRES = -1
 
 class Attributes:
     ATTACK = 1
@@ -857,6 +858,26 @@ def kill(discord_id, quantity, type):
     else:
         return False, "Incorrect type"
     return True, "Success"
+
+
+
+# ------------------------------
+# Actions
+# ------------------------------
+
+def recruit_soldiers(discord_id, quantity):
+    # Phase 1: Assertions
+    if not user_discord_id_exists(discord_id):
+        return None
+    quantity = int(quantity)
+
+    functionary_count = get_attribute(discord_id, Attributes.FUNCTIONARIES)
+    if functionary_count < quantity:
+        return False # Impossible: not enough functionaries
+    
+    increase_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
+    increase_attribute(discord_id, Attributes.SOLDIERS, quantity, NEVER_EXPIRES)
+    return True
 
 
 # new_user("casi", 466015764919353346)
