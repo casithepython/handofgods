@@ -17,6 +17,8 @@ async def user_react_on_message(bot, ctx, text, wait_user, reactions):
     try:
         user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
     except TimeoutError:
+        for reaction in reactions.keys():
+            await message.remove_reaction(reaction, ctx.me)
         return None
     emoji = str(user_reaction.emoji)
     for reaction in reactions.keys():
