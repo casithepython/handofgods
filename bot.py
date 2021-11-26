@@ -5,6 +5,7 @@ from asyncio import TimeoutError
 from main import Attributes
 import main as db
 import math
+from typing import Optional
 # import testdb as db
 
 debug_mode = True
@@ -15,7 +16,10 @@ bot = commands.Bot(command_prefix="?")
 
 
 @bot.command()
-async def join(ctx, name: str):
+async def join(ctx, name: str, *, must_be_none: Optional[str]):
+    if must_be_none is None:
+        ctx.send("Sorry, player name must be a single word")
+        return
     result = db.new_user(name, ctx.author.id)
     await ctx.send(result[1])
     return
