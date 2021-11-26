@@ -3,7 +3,6 @@ async def user_react_on_message(bot, ctx, text, wait_user, reactions):
     for reaction in reactions.keys():
         await message.add_reaction(reaction)
 
-    # Phase 2: Wait for user reaction
     def check(reaction, user):
         if str(reaction.emoji) not in reactions:
             return False

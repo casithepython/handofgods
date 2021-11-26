@@ -8,6 +8,7 @@ import math
 from typing import Optional
 import HelpfileReader
 import bot_admin
+import Attributes
 # import testdb as db
 
 debug_mode = True
@@ -87,98 +88,57 @@ async def info(ctx, name:str, info_type:str = None):
 
         return
 
-
 @bot.command()
 async def research(ctx, *, tech_name):
+    import formatting
+    from user_interaction import user_react_on_message
     tech_id = db.get_tech_id(tech_name)
-    player_discord = ctx.author.id
+    discord_id = ctx.author.id
     if tech_id is None:
         await ctx.send('Technology "{}" does not exist.'.format(tech_name))
         return
-    elif player_discord is None:
+    if discord_id is None:
         await ctx.send('You have not joined this game yet.')
         return
-    else:
-        # Phase 1: output text
-        success_cost = db.calculate_tech_cost(player_discord, tech_id)
-        multiplier = db.get_attribute(player_discord, Attributes.RESEARCH_COST_MULTIPLIER)
-        attempt_costs = tuple(map(lambda x: db.get_attribute(player_discord, x) * multiplier, (
-            db.Attributes.DIVINE_INSPIRATION_COST,
-            db.Attributes.AWAKE_REVELATION_COST,
-            db.Attributes.ASLEEP_REVELATION_COST,
-            db.Attributes.DIVINE_AVATAR_COST
-        )))
-        output_text = 'Attempt research of the technology "{tech_name}" (success cost {success_cost}):\n' \
-                      ':regional_indicator_a: for divine inspiration (success probability {div_inspr_prob:.1%}, attempt cost {attempt_costs[0]})\n' \
-                      ':regional_indicator_b: for waking revelation (success probability {awake_rev_prob:.1%}, attempt cost {attempt_costs[1]})\n' \
-                      ':regional_indicator_c: for dream revelation (success probability {dream_rev_prob:.1%}, attempt cost {attempt_costs[2]})\n' \
-                      ':regional_indicator_d: to incarnate and command research (success probability {divine_avatar_prob:.1%}, attempt cost {attempt_costs[3]})' \
-            .format(tech_name=tech_name,
-                    div_inspr_prob=db.get_attribute(player_discord, db.Attributes.DIVINE_INSPIRATION_RATE),
-                    awake_rev_prob=db.get_attribute(player_discord, db.Attributes.AWAKE_REVELATION_RATE),
-                    dream_rev_prob=db.get_attribute(player_discord, db.Attributes.ASLEEP_REVELATION_RATE),
-                    divine_avatar_prob=db.get_attribute(player_discord, db.Attributes.DIVINE_AVATAR_RATE),
-                    success_cost=success_cost, attempt_costs=attempt_costs
-                    )
-        message = await ctx.send(output_text)
-        reactions = {
-            '\N{REGIONAL INDICATOR SYMBOL LETTER A}': 'divine_inspiration',
-            '\N{REGIONAL INDICATOR SYMBOL LETTER B}': 'awake_revelation',
-            '\N{REGIONAL INDICATOR SYMBOL LETTER C}': 'asleep_revelation',
-            '\N{REGIONAL INDICATOR SYMBOL LETTER D}': 'divine_avatar'
-        }
-        for reaction in reactions.keys():
-            await message.add_reaction(reaction)
+    success_cost = db.calculate_tech_cost(discord_id, tech_id)
+    multiplier = db.get_attribute(discord_id, Attributes.RESEARCH_COST_MULTIPLIER)
+    attempt_costs = tuple(map(lambda x: db.get_attribute(discord_id, x) * multiplier, (
+        Attributes.DIVINE_INSPIRATION_COST,
+        Attributes.AWAKE_REVELATION_COST,
+        Attributes.ASLEEP_REVELATION_COST,
+        Attributes.DIVINE_AVATAR_COST
+    )))
 
-        def check(reaction, user):
-            if str(reaction.emoji) not in reactions:
-                return False
-            if user.id != ctx.author.id:
-                return False
-            if reaction.message.id != message.id:
-                return False
-            return True
-
-        try:
-            user_reaction, _ = await bot.wait_for('reaction_add', timeout=30.0, check=check)
-            emoji = str(user_reaction.emoji)
-
-            # wait for reaction from correct player
-            for reaction in reactions.keys():
-                if reaction != emoji:
-                    await message.remove_reaction(reaction, ctx.me)
-
-            def check_author(author):
-                def inner_check(message):
-                    if message.author.id != ctx.author.id:
-                        return False
-                    return True
-
-                return inner_check
-
-            priests = None
-            counter = 3
-            while priests is None:
-                if counter == 0:
-                    await ctx.send("Incorrect response too many times. Research aborted.")
-                    return
-                await ctx.send("Do you wish to use priests for this research? Type yes or no.")
-                decision = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-                if decision.content.lower() == 'yes':
-                    priests = True
-                    break
-                elif decision.content.lower() == 'no':
-                    priests = False
-                    break
-                else:
-                    await ctx.send("Incorrect response.")
-                    counter -= 1
-
-            result_text = db.attempt_research(player_discord, tech_id, reactions[emoji], priests)[1]
-            await ctx.send(result_text)
-            return
-        except TimeoutError:
-            ctx.send("Timed out")
+    success_probs = tuple(map(lambda x: db.get_attribute(discord_id, x) * multiplier, (
+        Attributes.DIVINE_INSPIRATION_RATE,
+        Attributes.AWAKE_REVELATION_RATE,
+        Attributes.ASLEEP_REVELATION_RATE,
+        Attributes.DIVINE_AVATAR_RATE
+    )))
+    output_text = formatting.request_research_method(tech_name, success_probs, success_cost, attempt_costs)
+    research_method = await user_react_on_message(bot, ctx, output_text, ctx.author, {
+        '\N{REGIONAL INDICATOR SYMBOL LETTER A}': 'divine_inspiration',
+        '\N{REGIONAL INDICATOR SYMBOL LETTER B}': 'awake_revelation',
+        '\N{REGIONAL INDICATOR SYMBOL LETTER C}': 'asleep_revelation',
+        '\N{REGIONAL INDICATOR SYMBOL LETTER D}': 'divine_avatar'
+    })
+    if research_method is None:
+        await ctx.send("Timed out")
+        return
+    
+    priest_text = 'Do you wish to use priests for this research? \n'\
+        ':regional_indicator_y: Yes\n'\
+        ':regional_indicator_n: No'
+    use_priests = await user_react_on_message(bot, ctx, priest_text, ctx.author, {
+        '\N{REGIONAL INDICATOR SYMBOL LETTER Y}': True,
+        '\N{REGIONAL INDICATOR SYMBOL LETTER N}': False
+    })
+    if use_priests is None:
+        await ctx.send("Timed out")
+        return
+    
+    result_text = db.attempt_research(discord_id, tech_id, research_method, use_priests)[1]
+    await ctx.send(result_text)
 
     # ctx.author.id
 

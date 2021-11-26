@@ -104,3 +104,16 @@ def research_info(info, discord_id):
             priest_bonus=db.get_attribute(discord_id, Attributes.PRIEST_RESEARCH_BONUS),
             multiplier=db.get_attribute(discord_id, Attributes.RESEARCH_COST_MULTIPLIER)
           )
+
+def request_research_method(tech_name, success_probs, success_cost, attempt_costs):
+  return  'Attempt research of the technology "{tech_name}" (success cost {success_cost}):\n' \
+          ':regional_indicator_a: for divine inspiration (success probability {success_probs[0]:.1%}, attempt cost {attempt_costs[0]})\n' \
+          ':regional_indicator_b: for waking revelation (success probability {success_probs[1]:.1%}, attempt cost {attempt_costs[1]})\n' \
+          ':regional_indicator_c: for dream revelation (success probability {success_probs[2]:.1%}, attempt cost {attempt_costs[2]})\n' \
+          ':regional_indicator_d: to incarnate and command research (success probability {success_probs[3]:.1%}, attempt cost {attempt_costs[3]})' \
+        .format(
+          tech_name=tech_name,
+          success_probs=success_probs,
+          success_cost=success_cost,
+          attempt_costs=attempt_costs
+        )
