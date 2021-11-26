@@ -870,7 +870,7 @@ def recruit_soldiers(discord_id, quantity):
     if not user_discord_id_exists(discord_id):
         return None
     quantity = int(quantity)
-    
+
     # Phase 2: Actually changing stuff
     functionary_count = get_attribute(discord_id, Attributes.FUNCTIONARIES)
     if functionary_count < quantity:
@@ -898,6 +898,13 @@ def disband_soldiers(discord_id, quantity):
     if soldier_count < quantity:
         return False # Impossible: not enough soldiers
     
+    dp_cost = get_attribute(discord_id, Attributes.SOLDIER_DISBAND_COST) * quantity
+    power = get_power(discord_id)
+
+    if power < dp_cost:
+        return False # Impossible: not enough power
+    
+    spend_power(discord_id, dp_cost)
     increase_attribute(discord_id, Attributes.SOLDIERS, -quantity, NEVER_EXPIRES)
     increase_attribute(discord_id, Attributes.FUNCTIONARIES, quantity, NEVER_EXPIRES)
     return True
