@@ -1,0 +1,43 @@
+{
+  "index": "Help page",
+  "research": {
+    "index": "Begin an attempt to research the technology. Follow the prompts for more information",
+    "parameters": ["TECH_NAME"]
+  },
+  "join": {
+    "index": "Join as a new player. You must not already have joined, the player name must not be in use, and the player name must be unique",
+    "parameters": ["PLAYERNAME"]
+  },
+  "help": {
+    "index": "Displays this help message"
+  },
+  "battle": {
+    "index": "Initiate an attack against the player, sending a number of soldiers to the front",
+    "parameters": ["PLAYERNAME", "SOLDIERCOUNT"]
+  },
+  "info": {
+    "index": "Displays the attributes of the player",
+    "parameters": ["PLAYERNAME"]
+  },
+  "convert": {
+    "index": "Convert a number of people. The prompts provide additional information",
+    "parameters": ["NUMBER"]
+  },
+  "default": [
+    "`?admin`: Administrative commands. Most people will not be able to use this command"
+  ],
+  "admin": {
+    "index": "Administrative commands. Most people will not be able to use this command",
+    "subcommands": {
+      "tech": {
+        "index": "Administrative commands regarding technologies",
+        "subcommands": {
+          "create": {
+            "index": "Create a new technology",
+            "parameters": ["TECH NAME", "COST"]
+          }
+        }
+      }
+    }
+  }
+}
