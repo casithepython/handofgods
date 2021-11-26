@@ -136,7 +136,11 @@ def get_player_id(discord_id):
 
 
 def get_player_attributes(discord_id):
-    return [(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in range(1,get_num_attributes()+1)]
+    ids = []
+    with connect() as cursor:
+        cursor.execute("SELECT id FROM attributes")
+        ids.extend(map(lambda x: x[0], cursor.fetchall()))
+    return [(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in ids]
 
 
 def get_player_info(discord_id):
