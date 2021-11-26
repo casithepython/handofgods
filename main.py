@@ -167,6 +167,14 @@ def get_player_names():
     return names
 
 
+def get_display_name(discord_id):
+    display_name = None
+    with connect() as cursor:
+        cursor.execute("SELECT display_name FROM players WHERE discord_id = ?",(discord_id,))
+        display_name = cursor.fetchone()[0]
+    return display_name
+
+
 def user_is_admin(discord_id):
     return discord_id in {262098148283908099, 466015764919353346}
 

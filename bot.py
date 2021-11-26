@@ -43,8 +43,9 @@ async def info(ctx, name:str = None, info_type:str = None):
     import formatting
     if name is None:
         output = "**Current game:**\n\n"
-        for name in db.get_player_names():
-            discord = db.get_user_by_name(name)
+        for base_name in db.get_player_names():
+            discord = db.get_user_by_name(base_name)
+            display_name = db.get_display_name(discord)
             output += "**{name}**:\n" \
                       "DP: {power}\n" \
                       "Functionaries: {funcs}\n" \
