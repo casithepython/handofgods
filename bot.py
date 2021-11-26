@@ -115,7 +115,7 @@ async def create(ctx,amount:int, type:str):
         discord_id=ctx.author.id
         from user_interaction import user_react_on_message
         if type in ["priests", "priest"]:
-            output = "> You are creating {num} priests at a cost of {cost:.0} per priest, for " \
+            output = "> You are creating {num} priests at a cost of {cost:.0f} per priest, for " \
                      "a total of {total} DP." \
                      "Do you wish to continue?\n> \n> " \
                      ":thumbsup: Yes\n> " \
@@ -136,7 +136,7 @@ async def create(ctx,amount:int, type:str):
                 return
 
         elif type in ["soldiers", "soldier", "troops"]:
-            output = "> You are creating {num} soldiers at a cost of {cost} per soldier, for " \
+            output = "> You are creating {num} soldiers at a cost of {cost:.0f} per soldier, for " \
                      "a total of {total} DP." \
                      "Do you wish to continue?\n> \n> " \
                      ":thumbsup: Yes\n> " \
@@ -323,7 +323,7 @@ async def convert(ctx, quantity: int):
         db.get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST)
     )
 
-    conversion_target = user_react_on_message(bot, ctx, output_text, ctx.author, {
+    conversion_target = await user_react_on_message(bot, ctx, output_text, ctx.author, {
         '\N{REGIONAL INDICATOR SYMBOL LETTER A}': "neutral",
         '\N{REGIONAL INDICATOR SYMBOL LETTER B}': "enemy",
         '\N{REGIONAL INDICATOR SYMBOL LETTER C}': "enemy_priest",
