@@ -8,6 +8,7 @@ from flask import Flask
 app = Flask(__name__)
 
 NEVER_EXPIRES = -1
+NO_PANTHEON = -1
 
 class Attributes:
     ATTACK = 1
@@ -630,8 +631,10 @@ def new_turn():
 # ----------------------------------------
 def attempt_conversion(player_discord, quantity, person_type, other_player_discord=None):
     if person_type != "neutral" or (other_player_discord is None and person_type == "neutral"):
-        if person_type == "neutral" or get_pantheon(player_discord) == -1 or get_pantheon(
-                other_player_discord) == -1 or get_pantheon(player_discord) != get_pantheon(other_player_discord):
+        if person_type == "neutral" or \
+           get_pantheon(player_discord) == NO_PANTHEON or \
+           get_pantheon(other_player_discord) == NO_PANTHEON or \
+           get_pantheon(player_discord) != get_pantheon(other_player_discord):
             if person_type == "enemy":
                 if quantity <= get_attribute(other_player_discord, Attributes.FUNCTIONARIES):
                     conversion_rate = get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE)
