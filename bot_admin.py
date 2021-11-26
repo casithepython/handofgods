@@ -75,7 +75,7 @@ async def user(bot, ctx, *args):
 
 async def user_delete(bot, ctx, *args):
     from user_interaction import user_react_on_message
-    if len(args) != 0:
+    if len(args) != 1:
         await ctx.send('Invalid command: wrong number of parameters')
         return
     
