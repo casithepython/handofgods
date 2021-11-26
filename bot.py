@@ -270,7 +270,7 @@ async def battle(ctx, player_name: str, quantity: int):
         expected_outcome[1]
     )
 
-    do_battle = user_react_on_message(bot, ctx, output_text, ctx.author, {
+    do_battle = await user_react_on_message(bot, ctx, output_text, ctx.author, {
         '\N{REGIONAL INDICATOR SYMBOL LETTER A}': True,
         '\N{REGIONAL INDICATOR SYMBOL LETTER B}': False,
     })

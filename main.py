@@ -106,7 +106,7 @@ def new_user(name, discord_id):
             Attributes.BONUS_POWER_PER_SOLDIER: 0,
             Attributes.BONUS_POWER_PER_PRIEST: 0,
             Attributes.ATTACKS_PER_TURN: 1,
-            Attributes.FUNCTIONARY_ARMOR: 0,
+            Attributes.FUNCTIONARY_ARMOR: 1,
             Attributes.FUNCTIONARY_DEFENSE: 0,
             Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0,
             Attributes.TOTAL_PRIEST_POWER: 0,
@@ -766,7 +766,7 @@ def attack(discord_id, other_player_id, quantity):
 def generate_damage(quantity, limit):
     total = 0
     for attack in range(int(quantity)):
-        total += random.randint(0, limit)
+        total += random.randint(0, int(limit))
     return total
 
 
