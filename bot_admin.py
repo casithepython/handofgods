@@ -8,6 +8,8 @@ async def tech(bot, ctx, *args):
         pass
     elif args[0] == "newturn":
         return await newturn()
+    else:
+        await ctx.send('Admin command does not exist')
 
 async def tech_create(bot, ctx, *args):
     async def _get_bonuses():
