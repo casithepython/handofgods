@@ -333,7 +333,7 @@ def tech_exists(tech_id):
         return cursor.fetchone() is not None
 
 
-def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
+def new_tech(name, description, cost, bonuses=[], prerequisites=[],chance_multiplier=1):
     # bonuses should be formatted as [[tech_1_id,value1],[tech_2_id,value2]]
     if bonuses is None:
         bonuses = []
@@ -348,9 +348,11 @@ def new_tech(name, description, cost, bonuses=[], chance_multiplier=1):
             for bonus in bonuses:
                 cursor.execute("INSERT INTO tech_bonuses (tech_id,attribute_id,value) VALUES (?,?,?)",
                                (tech_id, bonus[0], bonus[1]))
-        return True
+        for prereq in prerequisites:
+            add_tech_prerequisite(tech_id,prereq[0],prereq[1]==True,prereq[2])
+        return True, "Successfully created."
     else:
-        return False
+        return False, "Already exists."
 
 
 def add_tech_bonus(tech_id, attribute_id, value):
