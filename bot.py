@@ -1,10 +1,8 @@
 from discord.ext import commands
 import logging
 import SecretManager
-from asyncio import TimeoutError
 from main import Attributes
 import main as db
-import math
 from typing import Optional
 import HelpfileReader
 import bot_admin
