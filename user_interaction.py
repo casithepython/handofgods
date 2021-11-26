@@ -1,3 +1,5 @@
+from asyncio import TimeoutError
+
 async def user_react_on_message(bot, ctx, text, wait_user, reactions):
     message = await ctx.send(text)
     for reaction in reactions.keys():
