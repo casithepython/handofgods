@@ -577,7 +577,7 @@ def new_turn():
         give_power(discord_id, calculate_income(discord_id))
 
         # Reset attack army counter
-        attackers_to_add = get_attribute(discord_id, Attributes.SOLDIERS)
+        attackers_to_add = get_attribute(discord_id, Attributes.SOLDIERS) * get_attribute(discord_id,Attributes.ATTACKS_PER_TURN)
         insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, attackers_to_add, turn, turn)
 
         # Reset priest channeling
@@ -917,6 +917,9 @@ def recruit_priests(discord_id, quantity):
     spend_power(discord_id, dp_cost)
     increase_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
     increase_attribute(discord_id, Attributes.PRIESTS, quantity, NEVER_EXPIRES)
+
+    new_channeling_power = get_attribute(discord_id,Attributes.MAXIMUM_PRIEST_CHANNELING)*quantity
+    increase_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER,new_channeling_power,NEVER_EXPIRES)
     return True, "Successfully added {priests:.0} priests".format(priests=quantity)
 
 # new_user("casi", 466015764919353346)
