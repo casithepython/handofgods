@@ -57,7 +57,7 @@ async def info(ctx, name:str = None, info_type:str = None):
                       "DP: {power}\n> " \
                       "Functionaries: {funcs}\n> " \
                       "Soldiers: {soldiers}\n> " \
-                      "Priests: {priests}\n> \n> ".format(name=display_name,power=db.get_power(discord),
+                      "Priests: {priests}\n> \n> ".format(name=display_name,power=db.get_attribute(discord,Attributes.POWER),
                                                       funcs=db.get_attribute(discord,Attributes.FUNCTIONARIES),
                                                       soldiers=db.get_attribute(discord,Attributes.SOLDIERS),
                                                       priests=db.get_attribute(discord,Attributes.PRIESTS))
