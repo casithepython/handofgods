@@ -246,10 +246,11 @@ def get_power(discord_id):
 
 
 def give_power(discord_id, power):
+    turn = current_turn()
     with connect() as cursor:
         cursor.execute(
             "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
-            (discord_id, Attributes.POWER, power, -1, -1))
+            (discord_id, Attributes.POWER, power, turn, NEVER_EXPIRES))
 
 def spend_power(discord_id, power):
     player_power = get_power(discord_id)
@@ -265,7 +266,8 @@ def has_sufficient_channeling_power(discord_id, amount):
 
 
 def spend_channeling_power(discord_id, amount):
-    insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, -1 * amount, -1, -1)
+    turn = current_turn()
+    insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, -amount, turn, turn)
 
 
 # ----------------------------------------
@@ -554,14 +556,14 @@ def complete_research(discord_id, tech_id):
 
             # Apply bonuses
             cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
-
+            turn = current_turn()
             for bonus in cursor.fetchall():
-                bonus_pair = list(bonus)
+                attribute, value = tuple(bonus)
 
                 cursor.execute(
                     "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) values ("
                     "?,?,?,?,?)",
-                    (discord_id, bonus_pair[0], bonus_pair[1], -1, -1))
+                    (discord_id, attribute, value, current_turn(), NEVER_EXPIRES))
             return True
     else:
         return False
@@ -579,51 +581,46 @@ def current_turn():
 
 
 def calculate_income(discord_id):
-    population_bonus_power = get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL) + get_attribute(
-        discord_id, Attributes.BONUS_POWER_PER_SOLDIER) + get_attribute(discord_id,
-                                                                        Attributes.BONUS_POWER_PER_PRIEST)
+    population_bonus_power = \
+        get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL) + \
+        get_attribute(discord_id, Attributes.BONUS_POWER_PER_SOLDIER) + \
+        get_attribute(discord_id, Attributes.BONUS_POWER_PER_PRIEST)
+    
     boost_capacity_priest = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_CAPACITY)
     boost_capacity = get_attribute(discord_id, Attributes.PRIESTS) * boost_capacity_priest
-    income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power,
-                                                                                        boost_capacity)
+    income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power, boost_capacity)
 
     # Base income
     base_income = \
-        get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id,
-                                                                            Attributes.INCOME_PER_FUNCTIONAL) + \
+        get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id, Attributes.INCOME_PER_FUNCTIONAL) + \
         get_attribute(discord_id, Attributes.SOLDIERS) * get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER) + \
         get_attribute(discord_id, Attributes.PRIESTS) * get_attribute(discord_id, Attributes.INCOME_PER_PRIEST)
 
     return income_boost+base_income
+
 def new_turn():
     # Increase turn counter
+    turn = current_turn() + 1
     with connect() as cursor:
-        cursor.execute("UPDATE system_variables SET value = ? WHERE name = ?", (current_turn() + 1, "turn"))
+        cursor.execute("UPDATE system_variables SET value = ? WHERE name = ?", (turn, "turn"))
 
     for discord_id in get_discord_ids():
         # Grow population
-        insert_attribute(discord_id,
-                         Attributes.FUNCTIONARIES,
-                         get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id,
-                                                                                             Attributes.PASSIVE_POPULATION_GROWTH_RATE),
-                         -1,
-                         -1
-                         )
+        growth_amount = get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id, Attributes.PASSIVE_POPULATION_GROWTH_RATE)
+        insert_attribute(discord_id, Attributes.FUNCTIONARIES, growth_amount, turn, NEVER_EXPIRES)
 
         # Check for and add income
         # Population bonus power
-        give_power(discord_id,calculate_income(discord_id))
+        give_power(discord_id, calculate_income(discord_id))
 
         # Reset attack army counter
-        attackers_to_add = get_attribute(discord_id, Attributes.SOLDIERS) - get_attribute(discord_id,
-                                                                                          Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, attackers_to_add, -1, -1)
+        attackers_to_add = get_attribute(discord_id, Attributes.SOLDIERS)
+        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, attackers_to_add, turn, turn)
 
         # Reset priest channeling
         priests = get_attribute(discord_id, Attributes.PRIESTS)
-        channeling_to_add = (priests * get_attribute(discord_id, Attributes.MAXIMUM_PRIEST_CHANNELING)) \
-                            - get_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER)
-        insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, channeling_to_add, -1, -1)
+        channeling_to_add = (priests * get_attribute(discord_id, Attributes.MAXIMUM_PRIEST_CHANNELING))
+        insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, channeling_to_add, turn, turn)
 
 
 # ----------------------------------------
@@ -657,26 +654,28 @@ def attempt_conversion(player_discord, quantity, person_type, other_player_disco
                     spend_power(player_discord, attempt_cost * quantity)
                     spend_channeling_power(player_discord, attempt_cost * quantity)
                     converts = calculate_converts(quantity, conversion_rate)
+
+                    turn = current_turn()
                     with connect() as cursor:
                         if person_type == "enemy_priest":
                             cursor.execute(
                                 "INSERT INTO player_attributes (discord_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (other_player_discord, Attributes.PRIESTS, -1 * converts, -1, -1))
+                                (other_player_discord, Attributes.PRIESTS, -converts, turn, NEVER_EXPIRES))
                         elif person_type == "enemy":
                             cursor.execute(
                                 "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (other_player_discord, Attributes.FUNCTIONARIES, -1 * converts, -1, -1))
+                                (other_player_discord, Attributes.FUNCTIONARIES, -converts, turn, NEVER_EXPIRES))
                             cursor.execute(
                                 "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                                (player_discord, Attributes.FUNCTIONARIES, converts, turn, NEVER_EXPIRES))
                         elif person_type == "neutral":
                             cursor.execute(
                                 "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (player_discord, Attributes.FUNCTIONARIES, converts, -1, -1))
+                                (player_discord, Attributes.FUNCTIONARIES, converts, turn, NEVER_EXPIRES))
                         else:
                             return False, "Something went wrong that should never go wrong. Congratulations, you broke my system."
                         return True, [converts, attempt_cost * quantity]
@@ -760,27 +759,26 @@ def cast_buff(discord_id, attribute_id, amount):
     return True # Enough power
 
 def attack(discord_id, other_player_id, quantity):
+    if not user_discord_id_exists(discord_id):
+        return None, "Attacker does not exist"
+    if not user_discord_id_exists(other_player_id):
+        return None, "Defender does not exist"
+
     quantity = int(quantity)
     available_attackers = get_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-    if get_attribute(other_player_id, Attributes.SOLDIERS) + get_attribute(other_player_id,
-                                                                           Attributes.FUNCTIONARIES) + get_attribute(
-        other_player_id, Attributes.PRIESTS) > 0:
+    if get_attribute(other_player_id, Attributes.SOLDIERS) +\
+        get_attribute(other_player_id, Attributes.FUNCTIONARIES) +\
+        get_attribute(other_player_id, Attributes.PRIESTS) > 0:
         if quantity != 0:
             if quantity <= available_attackers:
                 attackers = quantity
-                attack_armor = get_attribute(discord_id, Attributes.ARMOR)
                 attack_value = get_attribute(discord_id, Attributes.ATTACK)
 
                 defenders = get_attribute(other_player_id, Attributes.SOLDIERS)
-                defense_armor = get_attribute(other_player_id, Attributes.ARMOR)
                 defense_value = get_attribute(other_player_id, Attributes.DEFENSE)
 
                 attack_damage = generate_damage(attackers, attack_value)
-                attackers_loss = math.floor(attack_damage /
-                                            attack_armor)
                 defense_damage = generate_damage(defenders, defense_value)
-                defenders_loss = math.floor(defense_damage /
-                                            defense_armor)
 
                 damage_received = deal_defense_damage(discord_id, defense_damage)
                 damage_dealt = deal_attack_damage(other_player_id, attack_damage)
@@ -788,11 +786,11 @@ def attack(discord_id, other_player_id, quantity):
                 # If some of the attackers die, then they're all ineligible anyway
                 # If all of them die, they're all ineligible
                 # So we just remove attackers
-                attackers_made_ineligible = attackers
+                attackers_made_ineligible = attackers - damage_received
 
-                # This won't expire, because we have to hard reset it at the beginning of every turn anyway
-                insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -1 * attackers_made_ineligible, -1,
-                                 -1)
+                # This expires, automatically resetting it at the end of every turn
+                turn = current_turn()
+                insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -attackers_made_ineligible, turn, turn)
                 return True, [damage_dealt[1], damage_received]
             else:
                 return False, "Insufficient attackers available"
@@ -875,14 +873,15 @@ def deal_defense_damage(discord_id, damage):
 
 
 def kill(discord_id, quantity, type):
+    turn = current_turn()
     if type == "soldiers":
-        insert_attribute(discord_id, Attributes.SOLDIERS, -1 * quantity, -1, -1)
+        insert_attribute(discord_id, Attributes.SOLDIERS, -quantity, turn, NEVER_EXPIRES)
     elif type == "functionaries":
-        insert_attribute(discord_id, Attributes.FUNCTIONARIES, -1 * quantity, -1, -1)
+        insert_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, turn, NEVER_EXPIRES)
     elif type == "priests":
-        insert_attribute(discord_id, Attributes.PRIESTS, -1 * quantity, -1, -1)
+        insert_attribute(discord_id, Attributes.PRIESTS, -quantity, turn, NEVER_EXPIRES)
     elif type == "attackers":
-        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -1 * quantity, -1, -1)
+        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -quantity, turn, NEVER_EXPIRES)
     else:
         return False, "Incorrect type"
     return True, "Success"
