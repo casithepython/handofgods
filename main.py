@@ -299,7 +299,7 @@ def get_attribute(discord_id, attribute_id):
 def get_attribute_name(attribute_id):
     name = None
     with connect() as cursor:
-        cursor.execute("SELECT name FROM attributes WHERE id = ?",(attribute_id,))
+        cursor.execute("SELECT display_name FROM attributes WHERE id = ?",(attribute_id,))
         name = cursor.fetchone()[0]
 
     return name
