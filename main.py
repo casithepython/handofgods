@@ -540,7 +540,7 @@ def current_turn():
     with connect() as cursor:
         cursor.execute("SELECT value FROM system_variables WHERE name = ?", ("turn",))
         turn = cursor.fetchone()[0]
-    return turn
+    return int(turn)
 
 
 def calculate_income(discord_id):

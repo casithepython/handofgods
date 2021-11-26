@@ -17,6 +17,7 @@ bot = commands.Bot(command_prefix=PREFIX)
 
 bot.help_command = None
 
+
 @bot.command()
 async def join(ctx, name: str, *, must_be_none: Optional[str]):
     if must_be_none is not None:
@@ -26,6 +27,7 @@ async def join(ctx, name: str, *, must_be_none: Optional[str]):
     await ctx.send(result[1])
     return
 
+
 @bot.command()
 async def admin(ctx, *args):
     discord_id = ctx.author.id
@@ -34,11 +36,14 @@ async def admin(ctx, *args):
             await bot_admin.tech(bot, ctx, *(args[1:]))
         elif args[0] == 'user':
             await bot_admin.user(bot, ctx, *(args[1:]))
+        elif args[0] == "newturn":
+            await bot_admin.newturn()
         else:
             await ctx.send('Admin command does not exist')
     else:
         await ctx.send("You're not an admin. You cannot beat the system. Big bird is watching you.")
         return
+
 
 @bot.command()
 async def info(ctx, name:str = None, info_type:str = None):
@@ -103,6 +108,7 @@ async def info(ctx, name:str = None, info_type:str = None):
             await ctx.send(output_text)
 
         return
+
 
 @bot.command()
 async def research(ctx, *, tech_name):
@@ -278,9 +284,11 @@ async def convert(ctx, quantity: int):
         
         await ctx.send(result_text)
 
+
 @bot.command()
 async def help(ctx, *command_context):
     await ctx.send(HelpfileReader.read(PREFIX, command_context))
+
 
 def start_bot():
     token = SecretManager.secrets['discord']['clientToken']
