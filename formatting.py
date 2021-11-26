@@ -8,13 +8,13 @@ def default_info(info, discord_id):
           "Functionaries: {functionaries:.0f}\n> " \
           "Priests: \n> \n> " \
           "**Battle statistics:**\n> " \
-          "Attack: {priests:.0f}\n> " \
-          "Defense: {attack:.0f}\n> " \
-          "Armor: {defense:.0f}\n> " \
-          "Initiative: {armor:.0f}\n> \n> " \
+          "Attack: {attack:.0f}\n> " \
+          "Defense: {defense:.0f}\n> " \
+          "Armor: {armor:.0f}\n> " \
+          "Initiative: {initiative:.0f}\n> \n> " \
           "**Power:**\n> " \
-          "Current DP: {initiative:.0f}\n> " \
-          "Income: {power:.0f}\n> " \
+          "Current DP: {power:.0f}\n> " \
+          "Income: {income:.0f}\n> " \
           "Remaining Priest Channeling Power: {channel}" \
           .format(
             display_name=info["display_name"],
