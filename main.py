@@ -61,6 +61,8 @@ class Attributes:
     FUNCTIONARY_DEFENSE = 49
     TOTAL_PRIEST_POWER = 50
     PRIEST_INCOME_BOOST_RATE = 51
+    DP_BUFF_POINTS = 52
+    DP_BUFF_COST_MULTIPLIER = 53
 
 
 class connect:
@@ -160,7 +162,8 @@ def new_user(name, discord_id):
                 Attributes.FUNCTIONARY_DEFENSE: 0,
                 Attributes.ATTACK_ELIGIBLE_SOLDIERS: 0,
                 Attributes.TOTAL_PRIEST_POWER: 0,
-                Attributes.PRIEST_INCOME_BOOST_RATE: 5
+                Attributes.PRIEST_INCOME_BOOST_RATE: 5,
+                Attributes.DP_BUFF_COST_MULTIPLIER: 0.01
             }
             for attribute_id, value in defaults.items():
                 cursor.execute(

@@ -77,10 +77,14 @@ attributes = [
     "functionary_armor",
     "functionary_defense",
     "total_priest_power",
-    "priest_income_boost_rate"
+    "priest_income_boost_rate",
+
+    "dp_buff_points",
+    "dp_buff_cost_multiplier"
 ]
-for attribute in attributes:
-    cursor.execute('INSERT INTO attributes (name) VALUES (?)', (attribute,))
+
+for name in attributes.items():
+    cursor.execute('INSERT INTO attributes (name, display_name) VALUES (?,?)', (name.casefold(), name))
 
 cursor.execute("INSERT INTO system_variables (name,value) values (?,?)", ("turn", 1))
 connection.commit()
