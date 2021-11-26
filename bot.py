@@ -39,7 +39,7 @@ async def admin(ctx, *args):
         return
 
 @bot.command()
-async def info(ctx, name:str, info_type:str = None):
+async def info(ctx, name:str = None, info_type:str = None):
     import formatting
     if name is None:
         output = "**Current game:**\n\n"
