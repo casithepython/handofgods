@@ -7,7 +7,7 @@ def default_info(info, discord_id):
           "Pantheon: {pantheon}\n> " \
           "Soldiers: {soldiers:.0f}\n> " \
           "Functionaries: {functionaries:.0f}\n> " \
-          "Priests: \n> \n> " \
+          "Priests: {priests:.0f}\n> " \
           "**Battle statistics:**\n> " \
           "Attack: {attack:.0f}\n> " \
           "Defense: {defense:.0f}\n> " \
