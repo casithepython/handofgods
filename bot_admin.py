@@ -8,6 +8,8 @@ async def tech(bot, ctx, *args):
         pass
     elif args[0] == "newturn":
         return await newturn()
+    else:
+        await ctx.send('Admin command does not exist')
 
 async def tech_create(bot, ctx, *args):
     async def _get_bonuses():
@@ -64,3 +66,36 @@ async def tech_create(bot, ctx, *args):
 
 async def newturn():
     return db.new_turn(), str(db.current_turn())
+
+async def user(bot, ctx, *args):
+    if args[0] == 'delete':
+        return await user_delete(bot, ctx, *(args[1:]))
+    else:
+        await ctx.send('Admin command does not exist')
+
+async def user_delete(bot, ctx, *args):
+    from user_interaction import user_react_on_message
+    if len(args) != 0:
+        await ctx.send('Invalid command: wrong number of parameters')
+        return
+    
+    user_name = args[0]
+    discord_id = db.get_user_by_name(user_name)
+
+    if discord_id is None:
+        await ctx.send('User does not exist')
+        return
+
+    output_text = 'Are you sure you want to delete the user "{}"?\n :regional_indicator_y: Yes / :regional_indicator_n: No'
+    should_delete = await user_react_on_message(bot, ctx, output_text, ctx.author, {
+        '\N{REGIONAL INDICATOR SYMBOL LETTER Y}': True,
+        '\N{REGIONAL INDICATOR SYMBOL LETTER N}': False
+    })
+
+    if should_delete is None:
+        await ctx.send('Timed out user deletion')
+    elif should_delete:
+        await ctx.send('Deleting user')
+        db.user_delete(discord_id)
+    else:
+        await ctx.send('Cancelled user deletion')

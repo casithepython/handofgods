@@ -32,6 +32,8 @@ async def admin(ctx, *args):
     if db.user_is_admin(discord_id):
         if args[0] == 'tech':
             await bot_admin.tech(bot, ctx, *(args[1:]))
+        elif args[0] == 'user':
+            await bot_admin.user(bot, ctx, *(args[1:]))
         else:
             await ctx.send('Admin command does not exist')
     else:

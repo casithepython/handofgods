@@ -119,6 +119,12 @@ def new_user(name, discord_id):
                 (discord_id, attribute_id, value, NEVER_EXPIRES))
     return True, "Successfully added user " + name
 
+def user_delete(discord_id):
+    with connect() as cursor:
+        cursor.execute('DELETE FROM players WHERE discord_id = ?', (discord_id,))
+        cursor.execute('DELETE FROM player_attributes WHERE discord_id = ?', (discord_id,))
+        cursor.execute('DELETE FROM player_technologies WHERE discord_id = ?', (discord_id,))
+        pass
 
 def get_player(discord_id):
     info = get_player_info(discord_id)
@@ -246,9 +252,10 @@ def insert_attribute(discord_id, attribute_id, value, start_turn, expiry_turn):
 def increase_attribute(discord_id, attribute_id, value, expiry_turn):
     insert_attribute(discord_id, attribute_id, value, current_turn(), expiry_turn)
 
-def get_attribute(discord_id, attribute_id):
+def get_attribute(discord_id, attribute_id, turn=None):
     value = None
-    turn = current_turn()
+    if turn is None:
+        turn = current_turn()
     with connect() as cursor:
         cursor.execute(
             "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
