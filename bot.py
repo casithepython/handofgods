@@ -7,6 +7,7 @@ import main as db
 import math
 from typing import Optional
 import HelpfileReader
+import bot_admin
 # import testdb as db
 
 debug_mode = True
@@ -27,67 +28,16 @@ async def join(ctx, name: str, *, must_be_none: Optional[str]):
     return
 
 @bot.command()
-async def admin(ctx,first:str = None, second:str = None, third:str = None, fourth:str = None, fifth:str = None, sixth:str = None, seventh:str = None):
+async def admin(ctx, *args):
     discord_id = ctx.author.id
-    if discord_id in [262098148283908099,466015764919353346]:
-        if first == "tech":
-            if second == "create":
-                name = third
-                cost = int(fourth)
-                def check_author(author):
-                    def inner_check(message):
-                        if message.author.id != ctx.author.id:
-                            return False
-                        return True
-
-                    return inner_check
-
-                await ctx.send("Please enter the description.")
-                description = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-                description = description.content
-
-                bonuses = []
-
-                while True:
-                    await ctx.send("Enter a bonus in the form <attribute_name> <value>, or \"exit\" to end.")
-                    bonus = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-                    bonus = bonus.content
-                    if bonus.lower() == "exit":
-                        break
-                    else:
-                        bonus = bonus.split()
-                        bonuses.append((db.get_attribute_id(bonus[0]),bonus[1]))
-
-                prerequisites = []
-                while True:
-                    await ctx.send("Enter a prerequisite in the form <prerequisite_name> <is_hard=true,false> <cost_bonus> or \"exit\" to end.")
-                    prereq = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-                    prereq = prereq.content
-                    if prereq.lower() == "exit":
-                        break
-                    else:
-                        prereq = prereq.split()
-                        if prereq[1].lower() in ["true","false"]:
-                            prerequisites.append((db.get_tech_id(prereq[0]), prereq[1].lower()=="true",int(prereq[2])))
-                        else:
-                            await ctx.send("Invalid is_hard value.")
-
-                await ctx.send("What should be the cost multiplier for this?")
-                multiplier = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
-                multiplier = float(multiplier.content)
-
-                output = db.new_tech(name,description,cost,bonuses,prerequisites,multiplier)
-                await ctx.send(output[1])
-                return
-            elif second == "attribute":
-                pass
-            elif second == "delete":
-                pass
+    if db.user_is_admin(discord_id):
+        if args[0] == 'tech':
+            await bot_admin.tech(bot, ctx, *(args[1:]))
+        else:
+            await ctx.send('Admin command does not exist')
     else:
         await ctx.send("You're not an admin. You cannot beat the system. Big bird is watching you.")
         return
-
-
 
 @bot.command()
 async def info(ctx, name:str, argument:str = None):
