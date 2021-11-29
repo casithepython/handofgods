@@ -4,7 +4,7 @@
     "research": {
       "index": "Begin an attempt to research the technology. Follow the prompts for more information",
       "parameters": [
-        "TECH_NAME"
+        "TECH NAME"
       ]
     },
     "join": {

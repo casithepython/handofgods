@@ -51,7 +51,7 @@ def user_discord_id_exists(discord_id):
 
 def new_user(name, discord_id):
     if user_discord_id_exists(discord_id):
-        return "You have already joined the game"
+        return False, "You have already joined the game"
     if user_name_exists(name):
         return False, "A player has already taken that name"
 
