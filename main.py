@@ -753,14 +753,51 @@ def attack(discord_id, other_player_id, quantity):
                 attackers = quantity
                 attack_value = get_attribute(discord_id, Attributes.ATTACK)
 
+                attacker_initiative = get_attribute(discord_id, Attributes.INITIATIVE)
+                defender_initiative = get_attribute(discord_id, Attributes.INITIATIVE)
+
+                
+
                 defenders = get_attribute(other_player_id, Attributes.SOLDIERS)
                 defense_value = get_attribute(other_player_id, Attributes.DEFENSE)
+                
+                damage_dealt = 0
+                damage_received = 0
 
-                attack_damage = generate_damage(attackers, attack_value)
-                defense_damage = generate_damage(defenders, defense_value)
+                first_strike_disabled_attackers = 0
+                first_strike_disabled_defenders = 0
+                if attacker_initiative > defender_initiative:
+                    pre_clash_damage = 0
+                    for i in range((attacker_initiative - defender_initiative) // 10):
+                        pre_clash_damage += generate_damage(attackers, attack_value)
+                    
+                    first_strike_count = (attacker_initiative - defender_initiative) / 10
+                    first_strike_count -= int(first_strike_count)
+                    first_strike_count *= attackers
+                    first_strike_count = int(first_strike_count)
+                    pre_clash_damage += generate_damage(first_strike_count, attack_value)
+                    
+                    damage_dealt += deal_attack_damage(other_player_id, pre_clash_damage)
+                    first_strike_disabled_attackers = first_strike_count
+                elif attacker_initiative < defender_initiative:
+                    pre_clash_damage = 0
+                    for i in range((defender_initiative - attacker_initiative) // 10):
+                        pre_clash_damage += generate_damage(defenders, defense_value)
+                    
+                    first_strike_count = (defender_initiative - attacker_initiative) / 10
+                    first_strike_count -= int(first_strike_count)
+                    first_strike_count *= defenders
+                    first_strike_count = int(first_strike_count)
+                    pre_clash_damage += generate_damage(first_strike_count, defense_value)
 
-                damage_received = deal_defense_damage(discord_id, defense_damage)
-                damage_dealt = deal_attack_damage(other_player_id, attack_damage)
+                    damage_received += deal_defense_damage(discord_id, pre_clash_damage)
+                    first_strike_disabled_defenders = first_strike_count
+                
+                attack_damage = generate_damage(attackers - first_strike_disabled_attackers, attack_value)
+                defense_damage = generate_damage(defenders - first_strike_disabled_defenders, defense_value)
+
+                damage_received += deal_defense_damage(discord_id, defense_damage)
+                damage_dealt += deal_attack_damage(other_player_id, attack_damage)
 
                 # If some of the attackers die, then they're all ineligible anyway
                 # If all of them die, they're all ineligible
