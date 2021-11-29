@@ -702,21 +702,27 @@ def get_buff_cost(discord_id,amount):
     soldier_count = get_attribute(discord_id, Attributes.SOLDIERS)
     buff_cost_multiplier = get_attribute(discord_id, Attributes.DP_BUFF_COST_MULTIPLIER)
     for i in range(amount):
-        casting_cost += 2 ** buffed_amount
+        casting_cost += 2 ** (buffed_amount / 10)
         buffed_amount += 1
     casting_cost = int(casting_cost * soldier_count * buff_cost_multiplier)
     print(casting_cost)
     return casting_cost
 
 
-def cast_buff(discord_id, attribute_id, amount):
+def cast_buff(discord_id, attribute_id, amount, target=None):
     # Phase 1: Assertions
+    if target is None:
+        target = discord_id
+    
     if attribute_id not in {Attributes.ATTACK, Attributes.DEFENSE, Attributes.ARMOR, Attributes.INITIATIVE}:
         return False, "Incorrect attribute. Must be attack, defense, armor, or initiative."
     if not user_discord_id_exists(discord_id):
         return False, "User invalid"
+    if not user_discord_id_exists(target):
+        return False, "Target invalid"
     if not attribute_exists(attribute_id):
         return False, "Attribute does not exist."
+    
 
     # Phase 2: Calculate cost
     casting_cost = get_buff_cost(discord_id,attribute_id,amount)
@@ -727,7 +733,7 @@ def cast_buff(discord_id, attribute_id, amount):
     turn = current_turn()
     spend_power(discord_id, casting_cost)
     increase_attribute(discord_id, Attributes.DP_BUFF_POINTS, amount, turn)
-    increase_attribute(discord_id, attribute_id, amount, turn)
+    increase_attribute(target, attribute_id, amount, turn)
     return True, "Successfully buffed {name} by {amount}".format(name=get_attribute_name(attribute_id), amount=amount)
 
 
