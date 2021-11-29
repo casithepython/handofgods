@@ -685,8 +685,12 @@ def get_pantheon_name(pantheon_id):
     name = None
     with connect() as cursor:
         cursor.execute("SELECT name FROM pantheons WHERE id = ?", (pantheon_id,))
-        name = cursor.fetchone()[0]
-    return name
+        row = cursor.fetchone()
+        if row is None:
+            return "None"
+        else:
+            return row[0]
+    # return name
 
 # ----------------------------------------
 # Battles
