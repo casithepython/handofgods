@@ -26,6 +26,8 @@ async def gpl(ctx):
 
 @bot.command()
 async def join(ctx, name: str, *, must_be_none: Optional[str]):
+    if name.casefold() in {'me', 'my'}:
+        await ctx.send("Sorry, player name cannot be a special word")
     if must_be_none is not None:
         await ctx.send("Sorry, player name must be a single word")
         return
@@ -71,9 +73,16 @@ async def info(ctx, name:str = None, info_type:str = None):
         await ctx.send(output)
         return
 
+    discord_id = None
+    if name.casefold() == "me":
+        discord_id = ctx.author.id
+    else:
+        discord_id = db.get_user_by_name(name)
+    
+    if discord_id is None:
+        await ctx.send('Player {name} does not exist'.format(name=name))
+        return
 
-
-    discord_id = db.get_user_by_name(name)
     info = db.get_player(discord_id)
     if info_type is None:
         output_text = formatting.default_info(info, discord_id)
