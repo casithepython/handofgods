@@ -83,7 +83,7 @@ attributes = [
     "dp_buff_cost_multiplier"
 ]
 
-for name in attributes.items():
+for name in attributes:
     cursor.execute('INSERT INTO attributes (name, display_name) VALUES (?,?)', (name.casefold(), name))
 
 cursor.execute("INSERT INTO system_variables (name,value) values (?,?)", ("turn", 1))
