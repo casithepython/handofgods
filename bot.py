@@ -1,4 +1,5 @@
 from discord.ext import commands
+import discord
 import logging
 import SecretManager
 from main import Attributes
@@ -410,6 +411,16 @@ async def convert(ctx, quantity: int):
 @bot.command()
 async def help(ctx, *command_context):
     await ctx.send(HelpfileReader.read(PREFIX, command_context))
+
+@bot.command()
+async def whois(ctx, member: discord.Member):
+    name = member.name
+    if member.nick:
+        name = member.nick
+    if db.user_discord_id_exists(member.id):
+        await ctx.send("{name} plays as {display_name}".format(name=name, display_name=db.get_display_name(member.id)))
+    else:
+        await ctx.send("{name} has not joined the game".format(name=name))
 
 
 def start_bot():

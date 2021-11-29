@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS technologies;
 DROP TABLE IF EXISTS tech_bonuses;
 DROP TABLE IF EXISTS tech_prerequisites;
 DROP TABLE IF EXISTS system_variables;
+DROP TABLE IF EXISTS player_technologies;
 
 /* Old table names */
 DROP TABLE IF EXISTS tech;
