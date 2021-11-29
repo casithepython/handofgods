@@ -102,3 +102,18 @@ async def user_delete(bot, ctx, *args):
 
 async def kill(bot, ctx):
     await bot.close()
+
+async def help(bot, ctx, *args):
+    if len(args) != 1:
+        await ctx.send('Invalid command: wrong number of parameters')
+        return
+    elif args[0] == "refresh":
+        await help_refresh(bot, ctx)
+        return
+    else:
+        await ctx.send('Admin command does not exist')
+
+async def help_refresh(bot, ctx):
+    import HelpfileReader
+    HelpfileReader.refresh()
+    await ctx.send('Helpfile refreshed')

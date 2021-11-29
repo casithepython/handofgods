@@ -5,10 +5,16 @@ class IncompleteMapper(dict):
   def __missing__(self, key):
     return '{' + key + '}'
 
-with open('help.json', 'r') as f:
-  help_document = json.load(f)
+help_document = None
 
-def read(prefix:str, command_context: Tuple[str, ...]=(), commands:dict=help_document):
+def refresh():
+  global help_document
+  with open('help.json', 'r') as f:
+    help_document = json.load(f)
+
+def read(prefix:str, command_context: Tuple[str, ...]=(), commands:Optional[dict]=None):
+  if commands is None:
+    commands = help_document
   for command in command_context:
     if 'subcommands' not in commands:
       return "Command help does not exist"
@@ -42,3 +48,5 @@ def format_command(command_context, parameters, has_subcommands):
     return '`{prefix}{command}{star} {parameters}` {index}'.format_map(IncompleteMapper({
       'command':' '.join(command_context), 'parameters':' '.join(map(lambda x: '<{}>'.format(x), parameters)), 'star':('*' if has_subcommands else '')
     }))
+
+refresh()

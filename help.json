@@ -62,6 +62,13 @@
         },
         "kill": {
           "index": "Shuts down the bot"
+        },
+        "help": {
+          "index": "Administrative commands regarding the help command",
+          "subcommands": {
+            "refresh": {
+              "index": "Refreshes the helpfile from memory"
+            }
           }
         }
       }

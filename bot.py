@@ -48,6 +48,8 @@ async def admin(ctx, *args):
             await bot_admin.newturn()
         elif args[0] == 'kill':
             await bot_admin.kill(bot, ctx)
+        elif args[0] == 'help':
+            await bot_admin.help(bot, ctx, *(args[1:]))
         else:
             await ctx.send('Admin command does not exist')
     else:
