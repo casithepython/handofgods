@@ -128,6 +128,7 @@ async def info(ctx, name:str = None, info_type:str = None):
 @bot.command()
 async def buff(ctx,name:str, attribute:str, amount:int = 1):
     from user_interaction import user_react_on_message
+
     discord_id = None
     if name == "me":
         discord_id = ctx.author.id
@@ -151,7 +152,7 @@ async def buff(ctx,name:str, attribute:str, amount:int = 1):
         })
 
         if do_buff:
-            results = db.cast_buff(discord_id, attribute_id,amount)
+            results = db.cast_buff(ctx.author.id, attribute_id, amount, discord_id)
             await ctx.send(results[1])
             return
 
