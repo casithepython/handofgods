@@ -59,6 +59,10 @@
               "parameters": ["PLAYERNAME"]
             }
           }
+        },
+        "kill": {
+          "index": "Shuts down the bot"
+          }
         }
       }
     }

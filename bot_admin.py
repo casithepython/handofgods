@@ -99,3 +99,6 @@ async def user_delete(bot, ctx, *args):
         db.user_delete(discord_id)
     else:
         await ctx.send('Cancelled user deletion')
+
+async def kill(bot, ctx):
+    await bot.close()
