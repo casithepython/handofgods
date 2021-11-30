@@ -64,6 +64,13 @@ async def tech_create(bot, ctx, *args):
     output = db.new_tech(name,description,cost,bonuses,prerequisites,multiplier)
     await ctx.send(output[1])
 
+async def pantheon(bot,ctx,*args):
+    discord_id = db.get_player_by_name(args[1])
+    pantheon_id = db.get_pantheon_by_name(args[2])
+    results = db.join_pantheon(discord_id,pantheon_id)
+    await ctx.send(results[1])
+    return
+
 async def newturn():
     return db.new_turn(), str(db.current_turn())
 
@@ -80,7 +87,7 @@ async def user_delete(bot, ctx, *args):
         return
     
     user_name = args[0]
-    discord_id = db.get_user_by_name(user_name)
+    discord_id = db.get_player_by_name(user_name)
 
     if discord_id is None:
         await ctx.send('User does not exist')

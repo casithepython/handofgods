@@ -37,6 +37,51 @@ async def join(ctx, name: str, *, must_be_none: Optional[str]):
 
 
 @bot.command()
+async def send(ctx,name:str,amount:int):
+    other_player_discord = db.get_player_by_name(name)
+    results = db.send_power(ctx.author.id,other_player_discord,amount)
+    await ctx.send(results[1])
+    return
+
+
+@bot.command()
+async def pantheon(ctx,first:str,second:str):
+    def check_author(author):
+        def inner_check(message):
+            if message.author.id != ctx.author.id:
+                return False
+            return True
+
+        return inner_check
+    if first == "create":
+        name = second
+        await ctx.send("Please enter the description.")
+        description = await bot.wait_for('message', timeout=30.0, check=check_author(ctx.author))
+        description = description.content
+        results = db.create_pantheon(name,description)
+        db.join_pantheon(ctx.author.id,db.get_pantheon_by_name(name))
+        await ctx.send(results[1])
+        return
+    elif first == "leave":
+        from user_interaction import user_react_on_message
+        output = "> Are you sure you want to leave your pantheon?\n> " \
+                 ":thumbsup: Yes\n> " \
+                 ":thumbsdown: No"
+        do_leave = await user_react_on_message(bot, ctx, output, ctx.author, {
+            '\N{THUMBS UP SIGN}': True,
+            '\N{THUMBS DOWN SIGN}': False,
+        })
+
+        if do_leave:
+            results = db.leave_pantheon(ctx.author.id)
+            await ctx.send(results[1])
+            return
+        else:
+            await ctx.send("Canceled.")
+            return
+
+
+@bot.command()
 async def admin(ctx, *args):
     discord_id = ctx.author.id
     if db.user_is_admin(discord_id):
@@ -50,6 +95,8 @@ async def admin(ctx, *args):
             await bot_admin.kill(bot, ctx)
         elif args[0] == 'help':
             await bot_admin.help(bot, ctx, *(args[1:]))
+        elif args[0] == 'pantheon':
+            await bot_admin.pantheon(bot, ctx, *(args[1:]))
         else:
             await ctx.send('Admin command does not exist')
     else:
@@ -63,7 +110,7 @@ async def info(ctx, name:str = None, info_type:str = None):
     if name is None:
         output = "> **Current game:**\n> \n> "
         for base_name in db.get_player_names():
-            discord = db.get_user_by_name(base_name)
+            discord = db.get_player_by_name(base_name)
             display_name = db.get_display_name(discord)
             output += "**{name}**:\n> " \
                       "DP: {power:.0f}\n> " \
@@ -83,7 +130,7 @@ async def info(ctx, name:str = None, info_type:str = None):
     if name.casefold() == "me":
         discord_id = ctx.author.id
     else:
-        discord_id = db.get_user_by_name(name)
+        discord_id = db.get_player_by_name(name)
     
     if discord_id is None:
         await ctx.send('Player {name} does not exist'.format(name=name))
@@ -139,7 +186,7 @@ async def buff(ctx,name:str, attribute:str, amount:int = 1):
     if name == "me":
         discord_id = ctx.author.id
     else:
-        discord_id = db.get_user_by_name(name)
+        discord_id = db.get_player_by_name(name)
     try:
         attribute_id = db.get_attribute_id(attribute)
     except:
@@ -310,7 +357,7 @@ async def battle(ctx, player_name: str, quantity: int):
     import formatting
 
     player_discord = ctx.author.id
-    other_player_discord = db.get_user_by_name(player_name)
+    other_player_discord = db.get_player_by_name(player_name)
     if player_discord is None:
         await ctx.send('> You have not joined this game yet.')
         return
@@ -408,7 +455,7 @@ async def convert(ctx, quantity: int):
         await ctx.send("> Please specify the player to attempt to convert away from. \n"
                         "Avoid unnecessary whitespaces or characters.")
         other_player_name = (await bot.wait_for('message', timeout=30.0, check=check)).content
-        other_player_id = db.get_user_by_name(other_player_name)
+        other_player_id = db.get_player_by_name(other_player_name)
 
         success, results = db.attempt_conversion(player_discord=player_discord,
                                         quantity=quantity,

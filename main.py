@@ -33,7 +33,7 @@ def user_name_exists(name):
         return cursor.fetchone() is not None
 
 
-def get_user_by_name(name):
+def get_player_by_name(name):
     with connect() as cursor:
         cursor.execute("SELECT discord_id FROM players WHERE name = ?", (name.casefold(),))
         row = cursor.fetchone()
@@ -693,20 +693,11 @@ def calculate_converts(quantity, chance):
 # ----------------------------------------
 # Pantheons
 # ----------------------------------------
-# TODO - construct pantheons
-# Pantheon mechanics include:
-# getting approval from all players SHELVED USE ADMIN
-# adding players to pantheons DONE
-# Combined military forces DONE
-# Conversion immunity DONE
-# Bonus sharing DONE
-# Sending money DONE
-# Can't attack until a turn after you leave a pantheon DONE
-# Split army losses among members
 def send_power(player_discord,other_player_discord,amount):
     if get_power(player_discord) >= amount:
         spend_power(player_discord,amount)
         give_power(other_player_discord,amount)
+        return True, "Sent."
     else:
         return False, "Insufficient DP."
 
