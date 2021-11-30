@@ -27,7 +27,7 @@ def default_info(info, discord_id):
             initiative=db.get_attribute(discord_id, Attributes.INITIATIVE),
             power=db.get_attribute(discord_id,Attributes.POWER),
             income=db.calculate_income(discord_id),
-            channel=db.calculate_income(discord_id)
+            channel=db.get_channeling_power(discord_id)
           )
 
 def income_info(info, discord_id):

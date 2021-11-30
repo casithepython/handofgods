@@ -228,6 +228,10 @@ def has_sufficient_channeling_power(discord_id, amount):
     return amount <= get_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER)
 
 
+def get_channeling_power(discord_id):
+    return get_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER)
+
+
 def spend_channeling_power(discord_id, amount):
     turn = current_turn()
     insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, -amount, turn, turn)
