@@ -1,6 +1,10 @@
 {
   "index": "Command help",
   "subcommands": {
+    "create": {
+      "index": "Converts types of populations. <NUMBER> must be an integer. <POP_TYPE> must be either \"priest\" or \"priests\" (creates priests from functionaries); or \"soldiers\", \"soldier\" or \"troops\" (creates soldiers from functionaries)",
+      "parameters":["NUMBER", "POP_TYPE"]
+    },
     "research": {
       "index": "Begin an attempt to research the technology. Follow the prompts for more information",
       "parameters": [
