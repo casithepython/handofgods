@@ -68,10 +68,12 @@ async def info(ctx, name:str = None, info_type:str = None):
             output += "**{name}**:\n> " \
                       "DP: {power:.0f}\n> " \
                       "Functionaries: {funcs:.0f}\n> " \
-                      "Soldiers: {soldiers:.0f}\n> " \
+                      "Personal Soldiers: {soldiers:.0f}\n> " \
+                      "Total Soldiers: {total_soldiers:.0f}\n" \
                       "Priests: {priests:.0f}\n> \n> ".format(name=display_name,power=db.get_attribute(discord,Attributes.POWER),
                                                       funcs=db.get_attribute(discord,Attributes.FUNCTIONARIES),
                                                       soldiers=db.get_attribute(discord,Attributes.SOLDIERS),
+                                                      total_soldiers=db.get_army(discord),
                                                       priests=db.get_attribute(discord,Attributes.PRIESTS))
         output += "Current turn: {turn:.0f}".format(turn=db.current_turn())
         await ctx.send(output)
@@ -144,7 +146,7 @@ async def buff(ctx,name:str, attribute:str, amount:int = 1):
         await ctx.send("Incorrect attribute.")
         return
 
-    if db.get_attribute(discord_id,Attributes.SOLDIERS) > 0:
+    if db.get_army(discord_id) > 0:
         cost = db.get_buff_cost(discord_id, amount)
         output = f"> You are attempting to buff {attribute} by {amount}. This will cost you {cost} DP.\n> " \
                  f"Do you wish to continue?\n> " \
@@ -341,8 +343,8 @@ async def battle(ctx, player_name: str, quantity: int):
         results = db.attack(player_discord, other_player_discord, quantity)
         if results[0]:
             remaining_attackers = db.get_attribute(player_discord, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-            remaining_soldiers = db.get_attribute(player_discord, Attributes.SOLDIERS)
-            remaining_enemy_soldiers = db.get_attribute(other_player_discord, Attributes.SOLDIERS)
+            remaining_soldiers = db.get_army(player_discord)
+            remaining_enemy_soldiers = db.get_army(other_player_discord)
             result_text = formatting.battle_report(
                 results[1][0][0],
                 results[1][0][1],

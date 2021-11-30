@@ -257,8 +257,10 @@ def insert_attribute(discord_id, attribute_id, value, start_turn, expiry_turn):
 def increase_attribute(discord_id, attribute_id, value, expiry_turn):
     insert_attribute(discord_id, attribute_id, value, current_turn(), expiry_turn)
 
+
 def get_attribute(discord_id, attribute_id, turn=None):
-    value = None
+    pantheon = get_player_pantheon(discord_id)
+    my_value = None
     if turn is None:
         turn = current_turn()
     with connect() as cursor:
@@ -266,8 +268,31 @@ def get_attribute(discord_id, attribute_id, turn=None):
             "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
             "expiry_turn >= ?) AND start_turn<=?",
             (discord_id, attribute_id, turn, turn))
-        value = cursor.fetchone()[0]
-    return value
+        my_value = cursor.fetchone()[0]
+    if pantheon == -1 or attribute_id == Attributes.PANTHEON_BONUS_MULTIPLIER: # can't have infinite recursion
+        return my_value
+    else:
+        values = []
+        players = []
+        with connect() as cursor:
+            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?", (discord_id,))
+            for item in cursor.fetchall():
+                players.append(item[0])
+        for player in players:
+            if turn is None:
+                turn = current_turn()
+            with connect() as cursor:
+                cursor.execute(
+                    "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
+                    "expiry_turn >= ?) AND start_turn<=?",
+                    (player, attribute_id, turn, turn))
+                temp_value = cursor.fetchone()[0]
+            values.append(temp_value)
+        if attribute_id in [Attributes.ATTACK,Attributes.DEFENSE,Attributes.INITIATIVE,Attributes.ARMOR]:
+            return max(values)
+        else:
+            return max(my_value,max(values)*get_attribute(discord_id,Attributes.PANTHEON_BONUS_MULTIPLIER))
+
 
 def get_attribute_name(attribute_id):
     name = None
@@ -582,7 +607,7 @@ def new_turn():
         give_power(discord_id, calculate_income(discord_id))
 
         # Reset attack army counter
-        attackers_to_add = get_attribute(discord_id, Attributes.SOLDIERS) * get_attribute(discord_id,Attributes.ATTACKS_PER_TURN)
+        attackers_to_add = get_army(discord_id) * get_attribute(discord_id,Attributes.ATTACKS_PER_TURN)
         insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, attackers_to_add, turn, turn)
 
         # Reset priest channeling
@@ -597,9 +622,9 @@ def new_turn():
 def attempt_conversion(player_discord, quantity, person_type, other_player_discord=None):
     if person_type != "neutral" or (other_player_discord is None and person_type == "neutral"):
         if person_type == "neutral" or \
-           get_pantheon(player_discord) == NO_PANTHEON or \
-           get_pantheon(other_player_discord) == NO_PANTHEON or \
-           get_pantheon(player_discord) != get_pantheon(other_player_discord):
+           get_player_pantheon(player_discord) == NO_PANTHEON or \
+           get_player_pantheon(other_player_discord) == NO_PANTHEON or \
+           get_player_pantheon(player_discord) != get_player_pantheon(other_player_discord):
             if person_type == "enemy":
                 if quantity <= get_attribute(other_player_discord, Attributes.FUNCTIONARIES):
                     conversion_rate = get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE)
@@ -670,14 +695,71 @@ def calculate_converts(quantity, chance):
 # ----------------------------------------
 # TODO - construct pantheons
 # Pantheon mechanics include:
-# getting approval from all players
-# adding players to pantheons
-# Combined military forces
+# getting approval from all players SHELVED USE ADMIN
+# adding players to pantheons DONE
+# Combined military forces DONE
 # Conversion immunity DONE
-# Bonus sharing
-# Can't attack until a turn after you leave a pantheon
+# Bonus sharing DONE
+# Sending money DONE
+# Can't attack until a turn after you leave a pantheon DONE
+# Split army losses among members
+def send_power(player_discord,other_player_discord,amount):
+    if get_power(player_discord) >= amount:
+        spend_power(player_discord,amount)
+        give_power(other_player_discord,amount)
+    else:
+        return False, "Insufficient DP."
 
-def get_pantheon(discord_id):
+
+def create_pantheon(display_name,description):
+    name = display_name.casefold()
+    with connect() as cursor:
+        cursor.execute("INSERT INTO pantheons (name,display_name,description) VALUES (?,?,?)",(name,display_name,description))
+    return True, get_pantheon_by_name(name)
+
+
+def join_pantheon(discord_id,pantheon_id):
+    with connect() as cursor:
+        cursor.execute("UPDATE players SET pantheon = ? WHERE discord_id = ?",(pantheon_id,discord_id))
+    return True, "Successfully added {name} to {pantheon}.".format(name=get_player_info(discord_id)[2],
+                                                                   pantheon=get_pantheon(pantheon_id)[2])
+
+
+def leave_pantheon(discord_id):
+    with connect() as cursor:
+        cursor.execute("UPDATE players SET pantheon = -1 WHERE discord_id = ?", (discord_id,))
+        cursor.execute("INSERT INTO player_attributes (discord_id,attribute_id,value) VALUES (?,?,?)", (
+            discord_id,
+            Attributes.ATTACK_ELIGIBLE_SOLDIERS,
+            get_attribute(discord_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS)))
+    return True, "Successfully removed {name} from their pantheon".format(name=get_player_info(discord_id)[2])
+
+
+def get_pantheon_id(discord_id):
+    pantheon_id = None
+    with connect() as cursor:
+        cursor.execute("SELECT pantheon from players where discord_id = ?", (discord_id,))
+        pantheon_id = cursor.fetchone()[0]
+    return pantheon_id
+
+
+def get_pantheon(pantheon_id):
+    pantheon = None
+    with connect() as cursor:
+        cursor.execute("SELECT * from pantheons where id = ?", (pantheon_id,))
+        pantheon = cursor.fetchone()[0]
+    return pantheon
+
+
+def get_pantheon_by_name(name):
+    pantheon = None
+    with connect() as cursor:
+        cursor.execute("SELECT * from pantheons where name = ?", (name,))
+        pantheon = cursor.fetchone()[0]
+    return pantheon
+
+
+def get_player_pantheon(discord_id):
     pantheon = None
     with connect() as cursor:
         cursor.execute("SELECT pantheon FROM players WHERE discord_id = ?", (discord_id,))
@@ -703,7 +785,7 @@ def get_pantheon_name(pantheon_id):
 def get_buff_cost(discord_id,amount):
     casting_cost = 0
     buffed_amount = get_attribute(discord_id, Attributes.DP_BUFF_POINTS)
-    soldier_count = get_attribute(discord_id, Attributes.SOLDIERS)
+    soldier_count = get_army(discord_id)
     buff_cost_multiplier = get_attribute(discord_id, Attributes.DP_BUFF_COST_MULTIPLIER)
     for i in range(amount):
         casting_cost += 2 ** (buffed_amount / 10)
@@ -729,7 +811,7 @@ def cast_buff(discord_id, attribute_id, amount, target=None):
     
 
     # Phase 2: Calculate cost
-    casting_cost = get_buff_cost(discord_id,attribute_id,amount)
+    casting_cost = get_buff_cost(discord_id,amount)
     if get_power(discord_id) < casting_cost:
         return False, "Not enough power"
 
@@ -749,7 +831,7 @@ def attack(discord_id, other_player_id, quantity):
 
     quantity = int(quantity)
     available_attackers = get_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-    if get_attribute(other_player_id, Attributes.SOLDIERS) +\
+    if get_army(other_player_id) +\
         get_attribute(other_player_id, Attributes.FUNCTIONARIES) +\
         get_attribute(other_player_id, Attributes.PRIESTS) > 0:
         if quantity != 0:
@@ -762,7 +844,7 @@ def attack(discord_id, other_player_id, quantity):
 
                 
 
-                defenders = get_attribute(other_player_id, Attributes.SOLDIERS)
+                defenders = get_army(other_player_id)
                 defense_value = get_attribute(other_player_id, Attributes.DEFENSE)
                 
                 damage_dealt = 0
@@ -832,12 +914,24 @@ def expected_damage(player_discord, other_player_discord, quantity):
 
 
 def get_army(discord_id):
-    return get_attribute(discord_id,Attributes.SOLDIERS)
+    pantheon = get_player_pantheon(discord_id)
+    if pantheon == -1:
+        return get_attribute(discord_id,Attributes.SOLDIERS)
+    else:
+        soldiers = 0
+        players = []
+        with connect() as cursor:
+            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?",(discord_id,))
+            for item in cursor.fetchall():
+                players.append(item[0])
+        for player in players:
+            soldiers += get_attribute(discord_id,Attributes.SOLDIERS)
+        return soldiers
 
 
 def deal_attack_damage(discord_id, damage):
     remaining_damage = damage
-    available_defenders = get_attribute(discord_id, Attributes.SOLDIERS)
+    available_defenders = get_army(discord_id)
     available_functionaries = get_attribute(discord_id, Attributes.FUNCTIONARIES)
     available_priests = get_attribute(discord_id, Attributes.PRIESTS)
 
@@ -880,7 +974,7 @@ def deal_attack_damage(discord_id, damage):
 
 
 def deal_defense_damage(discord_id, damage):
-    soldiers = get_attribute(discord_id, Attributes.SOLDIERS)
+    soldiers = get_army(discord_id)
     soldiers_killed = 0
     damage = int(damage)
     if soldiers >= damage:

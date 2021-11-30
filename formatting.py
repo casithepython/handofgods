@@ -67,7 +67,8 @@ def income_info(info, discord_id):
 
 def war_info(info, discord_id):
   return  "**{name}'s army:**\n" \
-          "Soldiers: {soldiers:.0f} \n" \
+          "Personal Soldiers: {soldiers:.0f} \n" \
+          "Total Soldiers: {total_soldiers:.0f} \n" \
           "Available attackers: {attackers:.0f} \n" \
           "Attacks per soldier per turn: {attacks_per_turn:.0f} \n\n" \
           "Attack: {attack:.0f} \n" \
@@ -81,6 +82,7 @@ def war_info(info, discord_id):
           .format(
               name=info["display_name"],
               soldiers= int(db.get_attribute(discord_id,Attributes.SOLDIERS)),
+              total_soldiers = int(db.get_army(discord_id)),
               attackers=int(db.get_attribute(discord_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS)),
               attacks_per_turn=db.get_attribute(discord_id,Attributes.ATTACKS_PER_TURN),
               attack=db.get_attribute(discord_id,Attributes.ATTACK),

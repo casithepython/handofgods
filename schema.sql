@@ -42,7 +42,8 @@ CREATE TABLE attributes(
 CREATE TABLE pantheons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
-    display_name VARCHAR(255)
+    display_name VARCHAR(255),
+    description VARCHAR(255)
 );
 
 CREATE TABLE technologies (
