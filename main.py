@@ -89,7 +89,7 @@ def new_user(name, discord_id):
             Attributes.ENEMY_PRIEST_CONVERSION_COST: 50,
             Attributes.PANTHEON_BONUS_MULTIPLIER: 0.5,
             Attributes.MAXIMUM_PRIEST_CHANNELING: 10,
-            Attributes.PRIEST_COST: 0,
+            Attributes.PRIEST_COST: 15,
             Attributes.SOLDIER_COST: 0,
             Attributes.SOLDIER_DISBAND_COST: 0,
             Attributes.PRIESTS: 0,
@@ -103,6 +103,7 @@ def new_user(name, discord_id):
             Attributes.TOTAL_MASSACRED: 0,
             Attributes.TOTAL_POPULATION_LOST: 0,
             Attributes.TOTAL_SPENT: 0,
+            Attributes.TOTAL_INCOME: 0,
             Attributes.BONUS_POWER_PER_SOLDIER: 0,
             Attributes.BONUS_POWER_PER_PRIEST: 0,
             Attributes.ATTACKS_PER_TURN: 1,
@@ -275,7 +276,7 @@ def get_attribute(discord_id, attribute_id, turn=None):
         values = []
         players = []
         with connect() as cursor:
-            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?", (discord_id,))
+            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?", (pantheon,))
             for item in cursor.fetchall():
                 players.append(item[0])
         for player in players:
@@ -292,6 +293,7 @@ def get_attribute(discord_id, attribute_id, turn=None):
             return max(values)
         else:
             return max(my_value,max(values)*get_attribute(discord_id,Attributes.PANTHEON_BONUS_MULTIPLIER))
+
 
 
 def get_attribute_name(attribute_id):
@@ -735,10 +737,12 @@ def get_pantheon_id(discord_id):
 
 
 def get_pantheon(pantheon_id):
-    pantheon = None
+    pantheon = []
     with connect() as cursor:
         cursor.execute("SELECT * from pantheons where id = ?", (pantheon_id,))
-        pantheon = cursor.fetchone()[0]
+        for item in cursor.fetchone():
+            pantheon.append(item)
+
     return pantheon
 
 
@@ -751,7 +755,7 @@ def get_pantheon_by_name(name):
 
 
 def get_player_pantheon(discord_id):
-    pantheon = None
+    pantheon = []
     with connect() as cursor:
         cursor.execute("SELECT pantheon FROM players WHERE discord_id = ?", (discord_id,))
         pantheon = cursor.fetchone()[0]
@@ -912,11 +916,11 @@ def get_army(discord_id):
         soldiers = 0
         players = []
         with connect() as cursor:
-            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?",(discord_id,))
+            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?",(pantheon,))
             for item in cursor.fetchall():
                 players.append(item[0])
         for player in players:
-            soldiers += get_attribute(discord_id,Attributes.SOLDIERS)
+            soldiers += get_attribute(player,Attributes.SOLDIERS)
         return soldiers
 
 

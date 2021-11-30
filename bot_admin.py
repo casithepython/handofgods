@@ -1,4 +1,5 @@
 import main as db
+import subprocess
 async def tech(bot, ctx, *args):
     if args[0] == "create":
         return await tech_create(bot, ctx, *(args[1:]))
@@ -65,12 +66,15 @@ async def tech_create(bot, ctx, *args):
     await ctx.send(output[1])
 
 async def pantheon(bot,ctx,*args):
-    discord_id = db.get_player_by_name(args[1])
-    pantheon_id = db.get_pantheon_by_name(args[2])
+    discord_id = db.get_player_by_name(args[0])
+    pantheon_id = db.get_pantheon_by_name(args[1])
     results = db.join_pantheon(discord_id,pantheon_id)
     await ctx.send(results[1])
     return
 
+async def update():
+    subprocess.run("restart.sh", shell=True)
+    return
 async def newturn():
     return db.new_turn(), str(db.current_turn())
 
