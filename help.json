@@ -95,6 +95,12 @@
           "index": "Leave the pantheon"
         }
       }
+    },
+    "license": {
+      "index": "Returns license information"
+    },
+    "agpl": {
+      "index": "Returns license information. Alias of ?license"
     }
   }
 }

@@ -19,9 +19,9 @@ bot = commands.Bot(command_prefix=PREFIX)
 bot.help_command = None
 
 
-@bot.command()
-async def gpl(ctx):
-    await ctx.send("This bot is available under the GPL license, and the source code can be found at https://github.com/casithepython/handofgods")
+@bot.command(alias=['license'])
+async def agpl(ctx):
+    await ctx.send("This bot is available under the AGPL license, and the source code can be found at <https://github.com/casithepython/handofgods>")
     return
 
 @bot.command()
