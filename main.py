@@ -2,9 +2,6 @@ import json
 import random
 import sqlite3
 import Attributes
-from flask import Flask
-
-app = Flask(__name__)
 
 NEVER_EXPIRES = -1
 NO_PANTHEON = -1
@@ -1067,8 +1064,3 @@ def recruit_priests(discord_id, quantity):
     new_channeling_power = get_attribute(discord_id,Attributes.MAXIMUM_PRIEST_CHANNELING)*quantity
     increase_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER,new_channeling_power,NEVER_EXPIRES)
     return True, "Successfully added {priests} priests".format(priests=quantity)
-
-# new_user("casi", 466015764919353346)
-# complete_research(1, 1)
-'''if __name__ == '__main__':
-  app.run()'''
