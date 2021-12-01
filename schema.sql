@@ -32,7 +32,7 @@ CREATE TABLE player_technologies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     discord_id INTEGER,
     technology_id INTEGER,
-    start_turn INTEGER,
+    start_turn INTEGER
 );
 CREATE TABLE attributes(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
