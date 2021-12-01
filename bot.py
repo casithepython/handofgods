@@ -84,6 +84,9 @@ async def pantheon(ctx,first:str,second:str):
 @bot.command()
 async def admin(ctx, *args):
     discord_id = ctx.author.id
+    if len(args) == 0:
+        await ctx.send(HelpfileReader.read(PREFIX, ('admin',)))
+        return
     if db.user_is_admin(discord_id):
         if args[0] == 'tech':
             await bot_admin.tech(bot, ctx, *(args[1:]))
