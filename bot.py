@@ -8,7 +8,6 @@ from typing import Optional
 import HelpfileReader
 import bot_admin
 import Attributes
-# import testdb as db
 
 debug_mode = True
 
