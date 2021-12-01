@@ -101,7 +101,7 @@ async def admin(ctx, *args):
         elif args[0] == 'pantheon':
             await bot_admin.pantheon(bot, ctx, *(args[1:]))
         elif args[0] == 'update':
-            await bot_admin.pantheon()
+            await bot_admin.update()
         else:
             await ctx.send('Admin command does not exist')
     else:
