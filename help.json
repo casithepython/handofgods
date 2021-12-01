@@ -74,6 +74,25 @@
               "index": "Refreshes the helpfile from memory"
             }
           }
+        },
+        "pantheon": {
+          "index": "Make a player join a pantheon. This is an admin command because voting on joining is not yet implemented.",
+          "parameters": ["PLAYERNAME", "PANTHEONNAME"]
+        },
+        "update": {
+          "index": "Pulls the latest version of the code from the repository and restarts the bot"
+        }
+      }
+    },
+    "pantheon":{
+      "index": "Creating, joining and leaving pantheons",
+      "subcommands": {
+        "create":{
+          "index": "Creates a new pantheon",
+          "parameters": ["PANTHEONNAME"]
+        },
+        "leave": {
+          "index": "Leave the pantheon"
         }
       }
     }
