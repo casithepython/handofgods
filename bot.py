@@ -453,14 +453,16 @@ async def convert(ctx, quantity: int):
 async def help(ctx, *command_context):
     await ctx.send(HelpfileReader.read(PREFIX, command_context))
 @bot.event
-async def on_command_error(context, exception):
+async def on_command_error(context, exception: Exception):
     if isinstance(exception, commands.ConversionError):
         # @TODO: figure out which argument it was
         await context.reply(f"\u26a0 {exception}")
+    elif isinstance(exception.__cause__, NotImplementedError):
+        await context.reply(f"\u26a0 not implemented")
     # elif isinstace(exception, ...): ...
     else:
         # default handler prints to stderr
-        await Bot.on_command_error(bot, context, exception)
+        await commands.Bot.on_command_error(bot, context, exception)
 
 
 @bot.command()
