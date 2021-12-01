@@ -1,3 +1,4 @@
+#!/bin/sh
 git pull
 pkill -f bot.py
 echo "Killed, restarting"
