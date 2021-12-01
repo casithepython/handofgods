@@ -482,47 +482,66 @@ def technologies_get_prereq_display_info(technology_id):
 def attempt_research(discord_id, tech_id, method, priest=False):
     if not tech_exists(tech_id):
         return False, "This technology does not exist."
-    if not player_has_tech(discord_id, tech_id):
-        if method == "divine_inspiration":
-            attribute_rate = get_attribute(discord_id, Attributes.DIVINE_INSPIRATION_RATE)
-            attribute_cost = get_attribute(discord_id, Attributes.DIVINE_INSPIRATION_COST)
-        elif method == "awake_revelation":
-            attribute_rate = get_attribute(discord_id, Attributes.AWAKE_REVELATION_RATE)
-            attribute_cost = get_attribute(discord_id, Attributes.AWAKE_REVELATION_COST)
-        elif method == "asleep_revelation":
-            attribute_rate = get_attribute(discord_id, Attributes.ASLEEP_REVELATION_RATE)
-            attribute_cost = get_attribute(discord_id, Attributes.ASLEEP_REVELATION_COST)
-        elif method == "divine_avatar":
-            attribute_rate = get_attribute(discord_id, Attributes.DIVINE_AVATAR_RATE)
-            attribute_cost = get_attribute(discord_id, Attributes.DIVINE_AVATAR_COST)
-        else:
-            return False, "Invalid research method."
-
-        success_cost = calculate_tech_cost(discord_id, tech_id)
-        attempt_cost = attribute_cost * get_research_cost_multiplier(discord_id)
-
-        priest_used = False
-        if priest:
-            if has_sufficient_channeling_power(discord_id, attempt_cost + success_cost):
-                attribute_rate += get_attribute(discord_id, Attributes.PRIEST_RESEARCH_BONUS)
-                priest_used = True
-
-        if get_power(discord_id) >= attempt_cost + success_cost:
-            spend_power(discord_id, attempt_cost)
-            if priest_used:
-                spend_channeling_power(discord_id, attempt_cost)
-            if random.random() <= attribute_rate:
-                complete_research(discord_id, tech_id)
-                spend_power(discord_id, success_cost)
-                if priest_used:
-                    spend_channeling_power(discord_id, success_cost)
-                return True, "Successfully researched " + get_tech_name(tech_id) + "."
-            else:
-                return False, "Failed research chance, " + str(attempt_cost) + " DP spent."
-        else:
-            return False, "You do not have enough DP to attempt this research."
-    else:
+    if player_has_tech(discord_id, tech_id):
         return False, "You have already researched this technology."
+    prerequisites = technology_get_prerequisites(tech_id)
+    total_bonus = 0
+    prereq_pass = True
+    hard_fails = []
+    for id, name, hard, bonus in prerequisites:
+        if player_has_tech(discord_id, id):
+            total_bonus += bonus
+        elif hard:
+            prereq_pass = False
+            hard_fails.append(name)
+    if not prereq_pass:
+        tech_list = ""
+        if len(hard_fails) > 1:
+            tech_list = ", ".join(hard_fails[:-1]) + " and " + hard_fails[-1]
+        else:
+            tech_list = hard_fails[0]
+        return False, "You have not researched all the needed technologies. You must research {} before researching this technology".format(tech_list)
+
+
+    if method == "divine_inspiration":
+        attribute_rate = get_attribute(discord_id, Attributes.DIVINE_INSPIRATION_RATE)
+        attribute_cost = get_attribute(discord_id, Attributes.DIVINE_INSPIRATION_COST)
+    elif method == "awake_revelation":
+        attribute_rate = get_attribute(discord_id, Attributes.AWAKE_REVELATION_RATE)
+        attribute_cost = get_attribute(discord_id, Attributes.AWAKE_REVELATION_COST)
+    elif method == "asleep_revelation":
+        attribute_rate = get_attribute(discord_id, Attributes.ASLEEP_REVELATION_RATE)
+        attribute_cost = get_attribute(discord_id, Attributes.ASLEEP_REVELATION_COST)
+    elif method == "divine_avatar":
+        attribute_rate = get_attribute(discord_id, Attributes.DIVINE_AVATAR_RATE)
+        attribute_cost = get_attribute(discord_id, Attributes.DIVINE_AVATAR_COST)
+    else:
+        return False, "Invalid research method."
+
+    success_cost = max(0, calculate_tech_cost(discord_id, tech_id) - total_bonus)
+    attempt_cost = attribute_cost * get_research_cost_multiplier(discord_id)
+
+    priest_used = False
+    if priest:
+        if has_sufficient_channeling_power(discord_id, attempt_cost + success_cost):
+            attribute_rate += get_attribute(discord_id, Attributes.PRIEST_RESEARCH_BONUS)
+            priest_used = True
+
+    if get_power(discord_id) >= attempt_cost + success_cost:
+        spend_power(discord_id, attempt_cost)
+        if priest_used:
+            spend_channeling_power(discord_id, attempt_cost)
+        if random.random() <= attribute_rate:
+            complete_research(discord_id, tech_id)
+            spend_power(discord_id, success_cost)
+            if priest_used:
+                spend_channeling_power(discord_id, success_cost)
+            return True, "Successfully researched " + get_tech_name(tech_id) + "."
+        else:
+            return False, "Failed research chance, " + str(attempt_cost) + " DP spent."
+    else:
+        return False, "You do not have enough DP to attempt this research."
+    
 
 
 def calculate_tech_cost(discord_id, tech_id):
@@ -531,10 +550,12 @@ def calculate_tech_cost(discord_id, tech_id):
     return base_cost * player_cost_multiplier
 
 
-def player_has_technology(discord_id, technology_id):
+def player_has_technology(discord_id, technology_id, turn=None):
+    if turn is None:
+        turn = current_turn()
     with connect() as cursor:
-        cursor.execute("SELECT 1 FROM player_technologies WHERE discord_id = ? AND technology_id = ?",
-                       (discord_id, technology_id))
+        cursor.execute("SELECT 1 FROM player_technologies WHERE discord_id = ? AND technology_id = ? AND start_turn <= ?",
+                       (discord_id, technology_id, turn))
         return cursor.fetchone() is not None
 
 
@@ -543,8 +564,9 @@ def complete_research(discord_id, tech_id):
         return False
     if not player_has_technology(discord_id, tech_id):
         with connect() as cursor:
-            cursor.execute("INSERT INTO player_technologies (discord_id, technology_id) VALUES (?, ?)",
-                           (discord_id, tech_id))
+            turn = current_turn()
+            cursor.execute("INSERT INTO player_technologies (discord_id, technology_id, start_turn) VALUES (?, ?, ?)",
+                           (discord_id, tech_id, turn + 1))
 
             # Apply bonuses
             cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
@@ -555,7 +577,7 @@ def complete_research(discord_id, tech_id):
                 cursor.execute(
                     "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) values ("
                     "?,?,?,?,?)",
-                    (discord_id, attribute, value, current_turn() + 1, NEVER_EXPIRES))
+                    (discord_id, attribute, value, current_turn(), NEVER_EXPIRES))
             return True
     else:
         return False
