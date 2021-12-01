@@ -13,7 +13,7 @@ debug_mode = True
 
 research_cache = {}
 PREFIX = "?"
-bot = commands.Bot(command_prefix=PREFIX)
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(PREFIX))
 
 bot.help_command = None
 
