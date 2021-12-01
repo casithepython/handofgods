@@ -73,7 +73,7 @@ async def pantheon(bot,ctx,*args):
     return
 
 async def update():
-    subprocess.run("restart.sh", shell=True)
+    subprocess.run("./restart.sh", shell=True)
     return
 async def newturn():
     return db.new_turn(), str(db.current_turn())
