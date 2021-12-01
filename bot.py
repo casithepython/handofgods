@@ -478,6 +478,16 @@ async def convert(ctx, quantity: int):
 @bot.command()
 async def help(ctx, *command_context):
     await ctx.send(HelpfileReader.read(PREFIX, command_context))
+@bot.event
+async def on_command_error(context, exception):
+    if isinstance(exception, commands.ConversionError):
+        # @TODO: figure out which argument it was
+        await context.reply(f"\u26a0 {exception}")
+    # elif isinstace(exception, ...): ...
+    else:
+        # default handler prints to stderr
+        await Bot.on_command_error(bot, context, exception)
+
 
 @bot.command()
 async def whois(ctx, member: discord.Member):
