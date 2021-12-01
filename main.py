@@ -558,7 +558,7 @@ def complete_research(discord_id, tech_id):
                 cursor.execute(
                     "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) values ("
                     "?,?,?,?,?)",
-                    (discord_id, attribute, value, current_turn(), NEVER_EXPIRES))
+                    (discord_id, attribute, value, current_turn() + 1, NEVER_EXPIRES))
             return True
     else:
         return False
