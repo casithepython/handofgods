@@ -5,3 +5,4 @@ venv
 .idea
 *.db
 secrets.yaml
+bot-env
