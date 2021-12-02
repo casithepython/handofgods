@@ -489,6 +489,12 @@ async def whois(ctx, member: discord.Member):
     else:
         await ctx.send("{name} has not joined the game".format(name=name))
 
+@bot.command()
+async def proxy(ctx, *, text):
+    if db.user_is_admin(ctx.author.id):
+        await ctx.send(text)
+        await ctx.message.delete()
+
 
 def start_bot():
     token = SecretManager.secrets['discord']['clientToken']
