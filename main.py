@@ -518,7 +518,7 @@ def attempt_research(discord_id, tech_id, method, priest=False):
     else:
         return False, "Invalid research method."
 
-    success_cost = max(0, calculate_tech_cost(discord_id, tech_id) - total_bonus)
+    success_cost = max(0, calculate_tech_cost(discord_id, tech_id) + total_bonus)
     attempt_cost = attribute_cost * get_research_cost_multiplier(discord_id)
 
     priest_used = False
