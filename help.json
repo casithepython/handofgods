@@ -81,6 +81,10 @@
         },
         "update": {
           "index": "Pulls the latest version of the code from the repository and restarts the bot"
+        },
+        "join": {
+          "index": "Makes a player join as <PLAYERNAME>",
+          "parameters": ["PLAYERNAME", "USER"]
         }
       }
     },
@@ -97,7 +101,7 @@
       }
     },
     "proxy": {
-      "index": "Make the bot say <TEXT>",
+      "index": "Make the bot say <TEXT>. This is an admin-only command",
       "parameters": ["TEXT"]
     },
     "license": {
