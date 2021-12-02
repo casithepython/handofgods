@@ -96,6 +96,10 @@
         }
       }
     },
+    "proxy": {
+      "index": "Make the bot say <TEXT>",
+      "parameters": ["TEXT"]
+    },
     "license": {
       "index": "Returns license information"
     },
