@@ -13,7 +13,9 @@ debug_mode = True
 
 research_cache = {}
 PREFIX = "?"
-bot = commands.Bot(command_prefix=PREFIX)
+bot = commands.Bot(
+    command_prefix=commands.when_mentioned_or(PREFIX)
+)
 
 
 
@@ -79,6 +81,37 @@ async def pantheon(ctx,first:str,second:str):
             return
 
 
+<<<<<<< HEAD
+=======
+@bot.command()
+async def admin(ctx, *args):
+    discord_id = ctx.author.id
+    if len(args) == 0:
+        await ctx.send(HelpfileReader.read(PREFIX, ('admin',)))
+        return
+    if db.user_is_admin(discord_id):
+        if args[0] == 'tech':
+            await bot_admin.tech(bot, ctx, *(args[1:]))
+        elif args[0] == 'user':
+            await bot_admin.user(bot, ctx, *(args[1:]))
+        elif args[0] == "newturn":
+            await bot_admin.newturn()
+        elif args[0] == 'kill':
+            await bot_admin.kill(bot, ctx)
+        elif args[0] == 'help':
+            await bot_admin.help(bot, ctx, *(args[1:]))
+        elif args[0] == 'pantheon':
+            await bot_admin.pantheon(bot, ctx, *(args[1:]))
+        elif args[0] == 'update':
+            await bot_admin.update()
+        elif args[0] == 'join':
+            await bot_admin.join(bot, ctx, *(args[1:]))
+        else:
+            await ctx.send('Admin command does not exist')
+    else:
+        await ctx.send("You're not an admin. You cannot beat the system. Big bird is watching you.")
+        return
+>>>>>>> 533f1c223b56340eee8fde0bfba451ec09315927
 
 
 @bot.command()
@@ -470,6 +503,12 @@ async def whois(ctx, member: discord.Member):
         await ctx.send("{name} plays as {display_name}".format(name=name, display_name=db.get_display_name(member.id)))
     else:
         await ctx.send("{name} has not joined the game".format(name=name))
+
+@bot.command()
+async def proxy(ctx, *, text):
+    if db.user_is_admin(ctx.author.id):
+        await ctx.send(text)
+        await ctx.message.delete()
 
 
 def start_bot():
