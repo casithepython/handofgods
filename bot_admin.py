@@ -128,3 +128,23 @@ async def help_refresh(bot, ctx):
     import HelpfileReader
     HelpfileReader.refresh()
     await ctx.send('Helpfile refreshed')
+
+async def join(bot, ctx, *args):
+    if len(args) != 2:
+        await ctx.send('Invalid command: wrong number of parameters')
+        return
+    player_name = args[0]
+    user_name = args[1]
+    from discord.ext.commands import MemberConverter
+    converter = MemberConverter()
+    user = None
+    try:
+        user = await converter.convert(ctx)
+    except:
+        await ctx.send('Invalid command: username is not valid')
+    discord_id = user.id
+    success, explainer = db.new_user(user_name, discord_id)
+    if success:
+        ctx.send("Success: " + explainer)
+    else:
+        ctx.send("Failed: " + explainer)
