@@ -10,21 +10,28 @@ import bot_admin
 import Attributes
 
 debug_mode = True
-
-research_cache = {}
 PREFIX = "?"
-bot = commands.Bot(
-    command_prefix=commands.when_mentioned_or(PREFIX)
-)
-
-# load extensions
-bot.load_extension("handofgods.admin_commands")
 
 
-@bot.command(alias=['license'])
-async def agpl(ctx):
-    await ctx.send("This bot is available under the AGPL license, and the source code can be found at <https://github.com/casithepython/handofgods>")
-    return
+class HandOfGods(commands.Bot):
+    def __init__(self, *, command_prefix="?"):
+        super().__init__(
+            command_prefix=commands.when_mentioned_or(command_prefix)
+        )
+        self.research_cache = {}
+        self.load_extension("handofgods.admin_commands")
+
+
+bot = HandOfGods(command_prefix=PREFIX)
+
+
+@bot.command(alias='agpl')
+async def license(ctx):
+    await ctx.reply(
+        "This bot is available under the AGPL license, and the source code"
+        + "can be found at <https://github.com/casithepython/handofgods>"
+    )
+
 
 @bot.command()
 async def join(ctx, name: str, *, must_be_none: Optional[str]):
@@ -110,7 +117,7 @@ async def info(ctx, name:str = None, info_type:str = None):
         discord_id = ctx.author.id
     else:
         discord_id = db.get_player_by_name(name)
-    
+
     if discord_id is None:
         await ctx.send('Player {name} does not exist'.format(name=name))
         return
@@ -312,7 +319,7 @@ async def research(ctx, *, tech_name):
     if research_method is None:
         await ctx.send("Timed out")
         return
-    
+
     priest_text = '> Do you wish to use priests for this research? \n'\
         '> :regional_indicator_y: Yes\n'\
         '> :regional_indicator_n: No'
@@ -323,7 +330,7 @@ async def research(ctx, *, tech_name):
     if use_priests is None:
         await ctx.send("> Timed out")
         return
-    
+
     result_text = db.attempt_research(discord_id, tech_id, research_method, use_priests)[1]
     await ctx.send(result_text)
 
@@ -343,7 +350,7 @@ async def battle(ctx, player_name: str, quantity: int):
     if other_player_discord is None:
         await ctx.send('> Player "{}" does not exist.'.format(player_name))
         return
-    
+
     expected_outcome = db.expected_damage(player_discord, other_player_discord, quantity)
 
     # Phase 1: output text
@@ -380,7 +387,7 @@ async def battle(ctx, player_name: str, quantity: int):
                 remaining_soldiers,
                 remaining_attackers
             )
-            
+
             await ctx.send(">" + result_text)
             return
         else:
@@ -430,7 +437,7 @@ async def convert(ctx, quantity: int):
     elif conversion_target in ["enemy", "enemy_priest"]:
         def check(message):
             return message.author.id == ctx.author.id and db.user_name_exists(message.content)
-        
+
         await ctx.send("> Please specify the player to attempt to convert away from. \n"
                         "Avoid unnecessary whitespaces or characters.")
         other_player_name = (await bot.wait_for('message', timeout=30.0, check=check)).content
@@ -446,7 +453,7 @@ async def convert(ctx, quantity: int):
                 converts=results[0], cost=results[1])
         else:
             result_text = results
-        
+
         await ctx.send(result_text)
 
 
