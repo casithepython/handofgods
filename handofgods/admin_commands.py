@@ -47,12 +47,14 @@ class AdminCog(commands.Cog):
     async def attribute(self, ctx: Context, name: str):
         raise NotImplementedError  # @TODO
 
-    @tech.command()
-    async def delete(self, ctx: Context, name: str):
+    @tech.command(name="delete")
+    async def tech_delete(self, ctx: Context, name: str):
+        """Delete a technology."""
         raise NotImplementedError  # @TODO
     
-    @user.command()
-    async def delete(self, ctx: Context, name: str):
+    @user.command(name="delete")
+    async def user_delete(self, ctx: Context, name: str):
+        """Delete a luser."""
         raise NotImplementedError  # @TODO
 
 
