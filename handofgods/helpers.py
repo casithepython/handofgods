@@ -8,3 +8,10 @@ class OneWord(commands.Converter):
         if " " in argument:
             raise commands.BadArgument("must be one word")
         return argument
+
+
+# @TODO: subclasses?
+# currently just putting the error message in the first argument
+# and showing it to the user
+class DatabaseError(Exception):
+    """The database didn't like what you tried to do"""
