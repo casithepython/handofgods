@@ -3,6 +3,7 @@ from discord.ext.commands import Context
 
 from handofgods.helpers import OneWord
 
+
 class AdminCog(commands.Cog):
     async def cog_check(self, ctx: Context):
         return commands.has_permissions(manage_guild=True)
@@ -21,7 +22,7 @@ class AdminCog(commands.Cog):
     async def user(self, ctx: Context):
         """Modify user info."""
         await ctx.send_help("admin user")
-    
+
     @admin.command()
     async def newturn(self, ctx: Context):
         """Go to next turn."""
@@ -39,10 +40,11 @@ class AdminCog(commands.Cog):
 
     @tech.command()
     async def create(self, ctx: Context, name: OneWord, cost: int):
-        """Create a new tech, specifying the prerequisites and bonuses after."""
-        #await ctx.reply(repr(name) + " " + str(cost))
+        """Create a new tech, specifying the
+        prerequisites and bonuses after."""
+        # await ctx.reply(repr(name) + " " + str(cost))
         raise NotImplementedError  # @TODO
-    
+
     @tech.command()
     async def attribute(self, ctx: Context, name: str):
         raise NotImplementedError  # @TODO
@@ -51,7 +53,7 @@ class AdminCog(commands.Cog):
     async def tech_delete(self, ctx: Context, name: str):
         """Delete a technology."""
         raise NotImplementedError  # @TODO
-    
+
     @user.command(name="delete")
     async def user_delete(self, ctx: Context, name: str):
         """Delete a luser."""
