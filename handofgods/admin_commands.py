@@ -28,7 +28,7 @@ class AdminCog(commands.Cog):
         raise NotImplementedError  # @TODO
 
     @admin.command()
-    async def pantheon():
+    async def pantheon(self, ctx: Context):
         """Gonna be honest I have no idea what this does. --SIG"""
         raise NotImplementedError  # @TODO
 
@@ -39,7 +39,7 @@ class AdminCog(commands.Cog):
 
     @tech.command()
     async def create(self, ctx: Context, name: OneWord, cost: int):
-        """create a new tech, specifying the prerequisites and bonuses after."""
+        """Create a new tech, specifying the prerequisites and bonuses after."""
         #await ctx.reply(repr(name) + " " + str(cost))
         raise NotImplementedError  # @TODO
     
