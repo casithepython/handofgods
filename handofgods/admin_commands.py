@@ -29,7 +29,7 @@ class AdminCog(commands.Cog):
 
     @admin.command()
     async def pantheon():
-        """Gonna be honest I have no idea what this does."""
+        """Gonna be honest I have no idea what this does. --SIG"""
         raise NotImplementedError  # @TODO
 
     @admin.command()
