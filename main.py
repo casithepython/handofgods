@@ -55,8 +55,6 @@ def new_user(name, discord_id):
     with connect() as cursor:
         cursor.execute('INSERT INTO players (name, display_name, discord_id) VALUES (?,?,?)',
                         (name.casefold(), name, discord_id))
-        cursor.execute("SELECT discord_id FROM players WHERE name = ?", (name.casefold(),))
-        discord_id = cursor.fetchone()[0]
         defaults = {
             Attributes.ATTACK: 0,
             Attributes.DEFENSE: 0,
