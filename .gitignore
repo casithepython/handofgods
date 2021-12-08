@@ -1,6 +1,7 @@
 __pycache__
 clienttoken
 .vscode
+.mypy_cache
 venv
 .idea
 *.db
