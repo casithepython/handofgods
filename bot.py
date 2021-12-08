@@ -15,7 +15,6 @@ research_cache = {}
 PREFIX = "?"
 bot = commands.Bot(command_prefix=PREFIX)
 
-bot.help_command = None
 
 
 @bot.command(alias=['license'])
@@ -449,9 +448,6 @@ async def convert(ctx, quantity: int):
         await ctx.send(result_text)
 
 
-@bot.command()
-async def help(ctx, *command_context):
-    await ctx.send(HelpfileReader.read(PREFIX, command_context))
 @bot.event
 async def on_command_error(context, exception: Exception):
     if isinstance(exception, commands.ConversionError):
