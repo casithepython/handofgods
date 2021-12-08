@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS tech_bonuses;
 DROP TABLE IF EXISTS tech_prerequisites;
 DROP TABLE IF EXISTS system_variables;
 DROP TABLE IF EXISTS player_technologies;
+DROP TABLE IF EXISTS gamemasters;
 
 /* Old table names */
 DROP TABLE IF EXISTS tech;
@@ -16,13 +17,14 @@ CREATE TABLE players (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
     display_name VARCHAR(255),
-    discord_id VARCHAR(255),
+    discord_id INTEGER,
+    game_id INTEGER,
     pantheon INTEGER DEFAULT -1
 );
 
 CREATE TABLE player_attributes(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    discord_id INTEGER,
+    player_id INTEGER,
     attribute_id INTEGER,
     value FLOAT,
     start_turn INTEGER DEFAULT -1,
@@ -30,7 +32,7 @@ CREATE TABLE player_attributes(
 );
 CREATE TABLE player_technologies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    discord_id INTEGER,
+    player_id INTEGER,
     technology_id INTEGER,
     start_turn INTEGER
 );
@@ -43,6 +45,7 @@ CREATE TABLE attributes(
 CREATE TABLE pantheons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
+    game_id INTEGER,
     display_name VARCHAR(255),
     description VARCHAR(255)
 );
@@ -75,4 +78,9 @@ CREATE TABLE system_variables (
     name VARCHAR(255),
     display_name VARCHAR(255),
     value VARCHAR(255)
+);
+CREATE TABLE gamemasters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER,
+    player_id INTEGER
 )

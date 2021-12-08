@@ -66,17 +66,18 @@ async def tech_create(bot, ctx, *args):
     await ctx.send(output[1])
 
 async def pantheon(bot,ctx,*args):
-    discord_id = db.get_player_by_name(args[0])
+    player_id = db.get_player_by_name(args[0], db.get_game_id_from_context(ctx))
     pantheon_id = db.get_pantheon_by_name(args[1])
-    results = db.join_pantheon(discord_id,pantheon_id)
+    results = db.join_pantheon(player_id,pantheon_id)
     await ctx.send(results[1])
     return
 
 async def update():
     subprocess.run("./restart.sh", shell=True)
     return
-async def newturn():
-    return db.new_turn(), str(db.current_turn())
+async def newturn(bot, ctx):
+    game_id = db.get_game_id_from_context(ctx)
+    return db.new_turn(game_id), str(db.current_turn(game_id))
 
 async def user(bot, ctx, *args):
     if args[0] == 'delete':
@@ -91,9 +92,9 @@ async def user_delete(bot, ctx, *args):
         return
     
     user_name = args[0]
-    discord_id = db.get_player_by_name(user_name)
+    player_id = db.get_player_by_name(user_name, db.get_game_id_from_context(ctx))
 
-    if discord_id is None:
+    if player_id is None:
         await ctx.send('User does not exist')
         return
 
@@ -107,7 +108,7 @@ async def user_delete(bot, ctx, *args):
         await ctx.send('Timed out user deletion')
     elif should_delete:
         await ctx.send('Deleting user')
-        db.user_delete(discord_id)
+        db.user_delete(player_id)
     else:
         await ctx.send('Cancelled user deletion')
 
@@ -139,11 +140,11 @@ async def join(bot, ctx, *args):
     converter = MemberConverter()
     user = None
     try:
-        user = await converter.convert(ctx)
+        user = await converter.convert(ctx, user_name)
     except:
         await ctx.send('Invalid command: username is not valid')
     discord_id = user.id
-    success, explainer = db.new_user(user_name, discord_id)
+    success, explainer = db.create_player(player_name, discord_id, True)
     if success:
         ctx.send("Success: " + explainer)
     else:
