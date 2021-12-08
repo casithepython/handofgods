@@ -17,6 +17,8 @@ bot = commands.Bot(
     command_prefix=commands.when_mentioned_or(PREFIX)
 )
 
+# load extensions
+bot.load_extension("handofgods.admin_commands")
 
 
 @bot.command(alias=['license'])
