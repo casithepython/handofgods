@@ -1,3 +1,5 @@
+import asyncio
+
 from discord.ext import commands
 import discord
 import logging
@@ -31,6 +33,32 @@ async def license(ctx):
         "This bot is available under the AGPL license, and the source code"
         + "can be found at <https://github.com/casithepython/handofgods>"
     )
+
+
+@bot.command()
+async def version(ctx):
+    """Show version info"""
+    # @TODO: windows support
+    GIT_BIN = "/usr/bin/git"
+    try:
+        command = [GIT_BIN, "describe", "--all", "--dirty"]
+        proc = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+    except FileNotFoundError:
+        await ctx.reply("Error: Could not find git binary at `{GIT_BIN}`")
+
+    stdout, stderr = await proc.communicate()
+
+    if proc.returncode == 0:
+        await ctx.reply(f"`{stdout.decode()}`")
+    else:
+        command_str = ' '.join(command)
+        await ctx.reply(
+            f"Error: `{command_str}` returned code {proc.returncode}:\n"
+            + f"```\n{stderr.decode()}\n```")
 
 
 @bot.command()
