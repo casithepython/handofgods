@@ -41,7 +41,7 @@ async def version(ctx):
     # @TODO: windows support
     GIT_BIN = "/usr/bin/git"
     try:
-        command = [GIT_BIN, "describe", "--all", "--dirty"]
+        command = [GIT_BIN, "describe", "--dirty"]
         proc = await asyncio.create_subprocess_exec(
             *command,
             stdout=asyncio.subprocess.PIPE,
