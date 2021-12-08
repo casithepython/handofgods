@@ -40,8 +40,8 @@ class AdminCog(commands.Cog):
 
     @tech.command()
     async def create(self, ctx: Context, name: OneWord, cost: int):
-        """Create a new tech, specifying the
-        prerequisites and bonuses after."""
+        """Create a new tech
+        (prerequisites and bonuses are specified after)"""
         # await ctx.reply(repr(name) + " " + str(cost))
         raise NotImplementedError  # @TODO
 
