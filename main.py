@@ -1,6 +1,8 @@
 import json
 import random
 import sqlite3
+
+from discord import player
 import Attributes
 
 NEVER_EXPIRES = -1
@@ -20,41 +22,90 @@ class connect:
         self.__connection.commit()
         self.__connection.close()
 
+# ----------------------------------------
+# Game management
+# ----------------------------------------
+def get_game_id_from_context(ctx):
+    return ctx.guild.id
+
+def get_maximum_players_from_context(ctx):
+    if context_grants_admin(ctx):
+        return 100
+    else:
+        return 1
+
+def get_player_count_from_context(ctx):
+    with connect() as cursor:
+        cursor.execute("SELECT SUM(1) AS count FROM players WHERE discord_id = ? AND game_id = ?", (ctx.author.id, get_game_id_from_context(ctx)))
+        return cursor.fetchone()[0]
 
 # ----------------------------------------
 # User management
 # ----------------------------------------
-def user_name_exists(name):
-    with connect() as cursor:
-        cursor.execute("SELECT 1 FROM players WHERE name = ?", (name.casefold(),))
-        return cursor.fetchone() is not None
 
-
-def get_player_by_name(name):
+def player_get_game(player_id):
     with connect() as cursor:
-        cursor.execute("SELECT discord_id FROM players WHERE name = ?", (name.casefold(),))
+        cursor.execute("SELECT game_id FROM players WHERE id = ?", (player_id,))
         row = cursor.fetchone()
         if row is None:
             return None
         else:
             return row[0]
 
-
-def user_discord_id_exists(discord_id):
+def get_player_id_from_context(ctx):
     with connect() as cursor:
-        cursor.execute("SELECT 1 FROM players WHERE discord_id = ?", (discord_id,))
+        cursor.execute("SELECT id FROM players WHERE discord_id = ? AND game_id = ?", (ctx.author.id, get_game_id_from_context(ctx)))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        else:
+            return row[0]
+
+def user_name_exists(name, game_id):
+    with connect() as cursor:
+        cursor.execute("SELECT 1 FROM players WHERE name = ? AND game_id = ?", (name.casefold(), game_id))
         return cursor.fetchone() is not None
 
 
-def new_user(name, discord_id):
-    if user_discord_id_exists(discord_id):
-        return False, "You have already joined the game"
-    if user_name_exists(name):
+def get_player_by_name(name, game_id):
+    with connect() as cursor:
+        cursor.execute("SELECT id FROM players WHERE name = ? AND game_id = ?", (name.casefold(), game_id))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        else:
+            return row[0]
+
+def get_players_by_discord_id(discord_id, game_id):
+    with connect() as cursor:
+        cursor.execute("SELECT id FROM players WHERE discord_id = ? AND game_id = ?", (discord_id, game_id))
+        return [row[0] for row in cursor.fetchall()]
+
+def player_id_exists(player_id):
+    with connect() as cursor:
+        cursor.execute("SELECT 1 FROM players WHERE id = ?", (player_id,))
+        return cursor.fetchone() is not None
+
+def user_discord_id_exists(discord_id, game_id):
+    with connect() as cursor:
+        cursor.execute("SELECT 1 FROM players WHERE discord_id = ? AND game_id = ?", (discord_id, game_id))
+        return cursor.fetchone() is not None
+
+
+def create_player(name, ctx, ignore_max_players=False):
+    discord_id = ctx.author.id
+    game_id = get_game_id_from_context(ctx)
+
+    user_max_players = get_maximum_players_from_context(ctx)
+    if ignore_max_players or user_max_players <= get_player_id_from_context(ctx):
+        return False, "You have used up all of your player slots in this game (you have {})".format(user_max_players)
+    if user_name_exists(name, game_id):
         return False, "A player has already taken that name"
 
     with connect() as cursor:
-        cursor.execute('INSERT INTO players (name, display_name, discord_id) VALUES (?,?,?)',
-                        (name.casefold(), name, discord_id))
+        cursor.execute('INSERT INTO players (name, display_name, discord_id, game_id) VALUES (?,?,?,?)',
+                        (name.casefold(), name, discord_id, game_id))
+        player_id = cursor.lastrowid
         defaults = {
             Attributes.ATTACK: 0,
             Attributes.DEFENSE: 0,
@@ -111,126 +162,111 @@ def new_user(name, discord_id):
             Attributes.DP_BUFF_COST_MULTIPLIER: 0.01
         }
         for attribute_id, value in defaults.items():
-            cursor.execute(
-                "INSERT INTO player_attributes (discord_id,attribute_id,value,expiry_turn) VALUES (?,?,?,?)",
-                (discord_id, attribute_id, value, NEVER_EXPIRES))
+            __insert_attribute(cursor, player_id, attribute_id, value, 0, NEVER_EXPIRES)
     return True, "Successfully added user " + name
 
-def user_delete(discord_id):
+def user_delete(player_id):
     with connect() as cursor:
-        cursor.execute('DELETE FROM players WHERE discord_id = ?', (discord_id,))
-        cursor.execute('DELETE FROM player_attributes WHERE discord_id = ?', (discord_id,))
-        cursor.execute('DELETE FROM player_technologies WHERE discord_id = ?', (discord_id,))
+        cursor.execute('DELETE FROM players WHERE id = ?', (player_id,))
+        cursor.execute('DELETE FROM player_attributes WHERE player_id = ?', (player_id,))
+        cursor.execute('DELETE FROM player_technologies WHERE player_id = ?', (player_id,))
         pass
 
-def get_player(discord_id):
-    info = get_player_info(discord_id)
-    return {"id":info[0],
-            "name":info[1],
-            "display_name":info[2],
-            "discord_id":info[3],
-            "pantheon":info[4],
-            "tech": get_player_techs(discord_id),
-            "attributes":get_player_attributes(discord_id)}
+def get_player(player_id):
+    info = get_player_info(player_id)
+    return {"id":info["id"],
+            "name":info["name"],
+            "display_name":info['display_name'],
+            "discord_id":info['discord_id'],
+            "pantheon":info['pantheon'],
+            "tech": get_player_techs(player_id),
+            "attributes":get_player_attributes(player_id)}
 
 
-def get_player_id(discord_id):
-    return get_player_id_from_discord_id(discord_id)
-
-
-def get_player_attributes(discord_id):
+def get_player_attributes(player_id):
     ids = []
     with connect() as cursor:
         cursor.execute("SELECT id FROM attributes")
         ids.extend(map(lambda x: x[0], cursor.fetchall()))
-    return [(get_attribute_name(attribute_id), get_attribute(discord_id,attribute_id)) for attribute_id in ids]
+    return [(get_attribute_name(attribute_id), get_attribute(player_id, attribute_id)) for attribute_id in ids]
 
 
-def get_player_info(discord_id):
+def get_player_info(player_id):
     info = []
     with connect() as cursor:
-        cursor.execute("SELECT * FROM players WHERE discord_id = ?",(discord_id,))
+        cursor.execute("SELECT * FROM players WHERE id = ?",(player_id,))
         for value in cursor.fetchone():
             info.append(value)
     return info
 
 
-def get_discord_ids():
-    discord_ids = []
+def get_player_ids(game_id):
+    player_ids = []
     with connect() as cursor:
-        discord_ids = [discord_id[0] for discord_id in cursor.execute("SELECT discord_id FROM players")]
-    return discord_ids
+        cursor.execute("SELECT id FROM players WHERE game_id = ?", (game_id,))
+        player_ids = [row['id'] for row in cursor.fetchall()]
+    return player_ids
 
 
-def get_player_names():
+def get_player_names(game_id):
     names = None
     with connect() as cursor:
-        cursor.execute("SELECT name FROM players")
-        names = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT name FROM players WHERE game_id = ?", (game_id,))
+        names = [row['name'] for row in cursor.fetchall()]
     return names
 
 
-def get_display_name(discord_id):
+def get_display_name(player_id):
     display_name = None
     with connect() as cursor:
-        cursor.execute("SELECT display_name FROM players WHERE discord_id = ?",(discord_id,))
+        cursor.execute("SELECT display_name FROM players WHERE id = ?", (player_id,))
         display_name = cursor.fetchone()[0]
     return display_name
 
 
-def user_is_admin(discord_id):
-    return discord_id in {262098148283908099, 466015764919353346}
+def context_grants_admin(ctx):
+    return ctx.author.id in (262098148283908099, 466015764919353346)
 
 
-def get_research_cost_multiplier(discord_id):
-    return get_attribute(discord_id, Attributes.RESEARCH_COST_MULTIPLIER)
-
-
-def get_player_id_from_discord_id(discord_id):
-    with connect() as cursor:
-        cursor.execute("SELECT id FROM players WHERE discord_id = ?", (discord_id,))
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        else:
-            return row[0]
+def get_research_cost_multiplier(player_id):
+    return get_attribute(player_id, Attributes.RESEARCH_COST_MULTIPLIER)
 
 
 # ----------------------------------------
 # Power
 # ----------------------------------------
 
-def get_power(discord_id):
-    return get_attribute(discord_id, Attributes.POWER)
+def get_power(player_id):
+    return get_attribute(player_id, Attributes.POWER)
 
 
-def give_power(discord_id, power):
-    turn = current_turn()
+def give_power(player_id, power):
+    turn = current_turn(player_get_game(player_id))
     with connect() as cursor:
         cursor.execute(
-            "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
-            (discord_id, Attributes.POWER, power, turn, NEVER_EXPIRES))
+            "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) VALUES (?,?,?,?,?)",
+            (player_id, Attributes.POWER, power, turn, NEVER_EXPIRES))
 
-def spend_power(discord_id, power):
-    player_power = get_power(discord_id)
+def spend_power(player_id, power):
+    player_power = get_power(player_id)
     if power <= player_power:
-        give_power(discord_id, -power)
+        give_power(player_id, -power)
         return True
     else:
         return False
 
 
-def has_sufficient_channeling_power(discord_id, amount):
-    return amount <= get_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER)
+def has_sufficient_channeling_power(player_id, amount):
+    return amount <= get_attribute(player_id, Attributes.TOTAL_PRIEST_POWER)
 
 
-def get_channeling_power(discord_id):
-    return get_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER)
+def get_channeling_power(player_id):
+    return get_attribute(player_id, Attributes.TOTAL_PRIEST_POWER)
 
 
-def spend_channeling_power(discord_id, amount):
-    turn = current_turn()
-    insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, -amount, turn, turn)
+def spend_channeling_power(player_id, amount):
+    turn = current_turn(player_get_game(player_id))
+    insert_attribute(player_id, Attributes.TOTAL_PRIEST_POWER, -amount, turn, turn)
 
 
 # ----------------------------------------
@@ -244,26 +280,29 @@ def get_attribute_id(name):
     return attribute_id
 
 
-def insert_attribute(discord_id, attribute_id, value, start_turn, expiry_turn):
+def insert_attribute(player_id, attribute_id, value, start_turn, expiry_turn):
     with connect() as cursor:
-        cursor.execute("INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) "
-                       "VALUES (?,?,?,?,?)",
-                       (discord_id, attribute_id, value, start_turn, expiry_turn))
+        __insert_attribute(cursor, player_id, attribute_id, value, start_turn, expiry_turn)
 
-def increase_attribute(discord_id, attribute_id, value, expiry_turn):
-    insert_attribute(discord_id, attribute_id, value, current_turn(), expiry_turn)
+def __insert_attribute(cursor, player_id, attribute_id, value, start_turn, expiry_turn):
+    cursor.execute("INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) "
+                    "VALUES (?,?,?,?,?)",
+                    (player_id, attribute_id, value, start_turn, expiry_turn))
+
+def increase_attribute(player_id, attribute_id, value, expiry_turn):
+    insert_attribute(player_id, attribute_id, value, current_turn(player_get_game(player_id)), expiry_turn)
 
 
-def get_attribute(discord_id, attribute_id, turn=None):
-    pantheon = get_player_pantheon(discord_id)
+def get_attribute(player_id, attribute_id, turn=None):
+    pantheon = get_player_pantheon(player_id)
     my_value = None
     if turn is None:
-        turn = current_turn()
+        turn = current_turn(player_get_game(player_id))
     with connect() as cursor:
         cursor.execute(
-            "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
+            "SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
             "expiry_turn >= ?) AND start_turn<=?",
-            (discord_id, attribute_id, turn, turn))
+            (player_id, attribute_id, turn, turn))
         my_value = cursor.fetchone()[0]
     if pantheon == -1 or attribute_id == Attributes.PANTHEON_BONUS_MULTIPLIER: # can't have infinite recursion
         return my_value
@@ -271,15 +310,15 @@ def get_attribute(discord_id, attribute_id, turn=None):
         values = []
         players = []
         with connect() as cursor:
-            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?", (pantheon,))
+            cursor.execute("SELECT player_id FROM players WHERE pantheon = ?", (pantheon,))
             for item in cursor.fetchall():
                 players.append(item[0])
         for player in players:
             if turn is None:
-                turn = current_turn()
+                turn = current_turn(player_get_game(player_id))
             with connect() as cursor:
                 cursor.execute(
-                    "SELECT SUM(value) FROM player_attributes WHERE discord_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
+                    "SELECT SUM(value) FROM player_attributes WHERE player_id=? AND attribute_id=? AND (expiry_turn=-1 OR "
                     "expiry_turn >= ?) AND start_turn<=?",
                     (player, attribute_id, turn, turn))
                 temp_value = cursor.fetchone()[0]
@@ -287,7 +326,7 @@ def get_attribute(discord_id, attribute_id, turn=None):
         if attribute_id in [Attributes.ATTACK,Attributes.DEFENSE,Attributes.INITIATIVE,Attributes.ARMOR]:
             return max(values)
         else:
-            return max(my_value,max(values)*get_attribute(discord_id,Attributes.PANTHEON_BONUS_MULTIPLIER))
+            return max(my_value,max(values)*get_attribute(player_id,Attributes.PANTHEON_BONUS_MULTIPLIER))
 
 
 
@@ -435,25 +474,25 @@ def get_tech_chance_multiplier(tech_id):
     return multiplier
 
 
-def get_player_techs(discord_id):
+def get_player_techs(player_id):
     techs = []
     with connect() as cursor:
-        cursor.execute("SELECT technology_id FROM player_technologies WHERE discord_id = ?", (discord_id,))
+        cursor.execute("SELECT technology_id FROM player_technologies WHERE player_id = ?", (player_id,))
         techs = list(map(lambda x: x[0], cursor.fetchall()))
     return techs
 
 
-def player_has_tech(discord_id, tech_id):
+def player_has_tech(player_id, tech_id):
     with connect() as cursor:
-        cursor.execute("SELECT 1 FROM player_technologies WHERE discord_id = ? AND technology_id = ?",
-                       (discord_id, tech_id))
+        cursor.execute("SELECT 1 FROM player_technologies WHERE player_id = ? AND technology_id = ?",
+                       (player_id, tech_id))
         return cursor.fetchone() is not None
 
 
-def check_prerequisites(discord_id, tech_id):
+def check_prerequisites(player_id, tech_id):
     required_prerequisites = []
     for prerequisite in get_hard_prerequisites(tech_id):
-        if not player_has_tech(discord_id, prerequisite):
+        if not player_has_tech(player_id, prerequisite):
             required_prerequisites.append(prerequisite)
 
     return len(required_prerequisites) == 0, required_prerequisites
@@ -477,17 +516,17 @@ def technologies_get_prereq_display_info(technology_id):
 # ----------------------------------------
 # Research
 # ----------------------------------------
-def attempt_research(discord_id, tech_id, method, priest=False):
+def attempt_research(player_id, tech_id, method, priest=False):
     if not tech_exists(tech_id):
         return False, "This technology does not exist."
-    if player_has_tech(discord_id, tech_id):
+    if player_has_tech(player_id, tech_id):
         return False, "You have already researched this technology."
     prerequisites = technology_get_prerequisites(tech_id)
     total_bonus = 0
     prereq_pass = True
     hard_fails = []
     for id, name, hard, bonus in prerequisites:
-        if player_has_tech(discord_id, id):
+        if player_has_tech(player_id, id):
             total_bonus += bonus
         elif hard:
             prereq_pass = False
@@ -502,38 +541,38 @@ def attempt_research(discord_id, tech_id, method, priest=False):
 
 
     if method == "divine_inspiration":
-        attribute_rate = get_attribute(discord_id, Attributes.DIVINE_INSPIRATION_RATE)
-        attribute_cost = get_attribute(discord_id, Attributes.DIVINE_INSPIRATION_COST)
+        attribute_rate = get_attribute(player_id, Attributes.DIVINE_INSPIRATION_RATE)
+        attribute_cost = get_attribute(player_id, Attributes.DIVINE_INSPIRATION_COST)
     elif method == "awake_revelation":
-        attribute_rate = get_attribute(discord_id, Attributes.AWAKE_REVELATION_RATE)
-        attribute_cost = get_attribute(discord_id, Attributes.AWAKE_REVELATION_COST)
+        attribute_rate = get_attribute(player_id, Attributes.AWAKE_REVELATION_RATE)
+        attribute_cost = get_attribute(player_id, Attributes.AWAKE_REVELATION_COST)
     elif method == "asleep_revelation":
-        attribute_rate = get_attribute(discord_id, Attributes.ASLEEP_REVELATION_RATE)
-        attribute_cost = get_attribute(discord_id, Attributes.ASLEEP_REVELATION_COST)
+        attribute_rate = get_attribute(player_id, Attributes.ASLEEP_REVELATION_RATE)
+        attribute_cost = get_attribute(player_id, Attributes.ASLEEP_REVELATION_COST)
     elif method == "divine_avatar":
-        attribute_rate = get_attribute(discord_id, Attributes.DIVINE_AVATAR_RATE)
-        attribute_cost = get_attribute(discord_id, Attributes.DIVINE_AVATAR_COST)
+        attribute_rate = get_attribute(player_id, Attributes.DIVINE_AVATAR_RATE)
+        attribute_cost = get_attribute(player_id, Attributes.DIVINE_AVATAR_COST)
     else:
         return False, "Invalid research method."
 
-    success_cost = max(0, calculate_tech_cost(discord_id, tech_id) + total_bonus)
-    attempt_cost = attribute_cost * get_research_cost_multiplier(discord_id)
+    success_cost = max(0, calculate_tech_cost(player_id, tech_id) + total_bonus)
+    attempt_cost = attribute_cost * get_research_cost_multiplier(player_id)
 
     priest_used = False
     if priest:
-        if has_sufficient_channeling_power(discord_id, attempt_cost + success_cost):
-            attribute_rate += get_attribute(discord_id, Attributes.PRIEST_RESEARCH_BONUS)
+        if has_sufficient_channeling_power(player_id, attempt_cost + success_cost):
+            attribute_rate += get_attribute(player_id, Attributes.PRIEST_RESEARCH_BONUS)
             priest_used = True
 
-    if get_power(discord_id) >= attempt_cost + success_cost:
-        spend_power(discord_id, attempt_cost)
+    if get_power(player_id) >= attempt_cost + success_cost:
+        spend_power(player_id, attempt_cost)
         if priest_used:
-            spend_channeling_power(discord_id, attempt_cost)
+            spend_channeling_power(player_id, attempt_cost)
         if random.random() <= attribute_rate:
-            complete_research(discord_id, tech_id)
-            spend_power(discord_id, success_cost)
+            complete_research(player_id, tech_id)
+            spend_power(player_id, success_cost)
             if priest_used:
-                spend_channeling_power(discord_id, success_cost)
+                spend_channeling_power(player_id, success_cost)
             return True, "Successfully researched " + get_tech_name(tech_id) + "."
         else:
             return False, "Failed research chance, " + str(attempt_cost) + " DP spent."
@@ -542,40 +581,40 @@ def attempt_research(discord_id, tech_id, method, priest=False):
     
 
 
-def calculate_tech_cost(discord_id, tech_id):
+def calculate_tech_cost(player_id, tech_id):
     base_cost = get_tech_cost(tech_id)
-    player_cost_multiplier = get_attribute(discord_id, Attributes.RESEARCH_COST_MULTIPLIER)
+    player_cost_multiplier = get_attribute(player_id, Attributes.RESEARCH_COST_MULTIPLIER)
     return base_cost * player_cost_multiplier
 
 
-def player_has_technology(discord_id, technology_id, turn=None):
+def player_has_technology(player_id, technology_id, turn=None):
     if turn is None:
-        turn = current_turn()
+        turn = current_turn(player_get_game(player_id))
     with connect() as cursor:
-        cursor.execute("SELECT 1 FROM player_technologies WHERE discord_id = ? AND technology_id = ? AND start_turn <= ?",
-                       (discord_id, technology_id, turn))
+        cursor.execute("SELECT 1 FROM player_technologies WHERE player_id = ? AND technology_id = ? AND start_turn <= ?",
+                       (player_id, technology_id, turn))
         return cursor.fetchone() is not None
 
 
-def complete_research(discord_id, tech_id):
+def complete_research(player_id, tech_id):
     if not tech_exists(tech_id):
         return False
-    if not player_has_technology(discord_id, tech_id):
+    if not player_has_technology(player_id, tech_id):
         with connect() as cursor:
-            turn = current_turn()
-            cursor.execute("INSERT INTO player_technologies (discord_id, technology_id, start_turn) VALUES (?, ?, ?)",
-                           (discord_id, tech_id, turn + 1))
+            turn = current_turn(player_get_game(player_id))
+            cursor.execute("INSERT INTO player_technologies (player_id, technology_id, start_turn) VALUES (?, ?, ?)",
+                           (player_id, tech_id, turn + 1))
 
             # Apply bonuses
             cursor.execute("SELECT attribute_id,value FROM tech_bonuses WHERE tech_id = ?", (tech_id,))
-            turn = current_turn()
+            turn = current_turn(player_get_game(player_id))
             for bonus in cursor.fetchall():
                 attribute, value = tuple(bonus)
 
                 cursor.execute(
-                    "INSERT INTO player_attributes (discord_id,attribute_id,value,start_turn,expiry_turn) values ("
+                    "INSERT INTO player_attributes (player_id,attribute_id,value,start_turn,expiry_turn) values ("
                     "?,?,?,?,?)",
-                    (discord_id, attribute, value, current_turn(), NEVER_EXPIRES))
+                    (player_id, attribute, value, current_turn(player_get_game(player_id)), NEVER_EXPIRES))
             return True
     else:
         return False
@@ -584,110 +623,114 @@ def complete_research(discord_id, tech_id):
 # ----------------------------------------
 # Turns
 # ----------------------------------------
-def current_turn():
+def current_turn(game_id):
     turn = None
     with connect() as cursor:
-        cursor.execute("SELECT value FROM system_variables WHERE name = ?", ("turn",))
+        cursor.execute("SELECT value FROM system_variables WHERE name = ? AND game_id = ?", ("turn", game_id))
         turn = cursor.fetchone()[0]
     return int(turn)
 
 
-def calculate_income(discord_id):
+def calculate_income(player_id):
     population_bonus_power = \
-        get_attribute(discord_id, Attributes.BONUS_POWER_PER_FUNCTIONAL) + \
-        get_attribute(discord_id, Attributes.BONUS_POWER_PER_SOLDIER) + \
-        get_attribute(discord_id, Attributes.BONUS_POWER_PER_PRIEST)
+        get_attribute(player_id, Attributes.BONUS_POWER_PER_FUNCTIONAL) + \
+        get_attribute(player_id, Attributes.BONUS_POWER_PER_SOLDIER) + \
+        get_attribute(player_id, Attributes.BONUS_POWER_PER_PRIEST)
     
-    boost_capacity_priest = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_CAPACITY)
-    boost_capacity = get_attribute(discord_id, Attributes.PRIESTS) * boost_capacity_priest
-    income_boost = get_attribute(discord_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power, boost_capacity)
+    boost_capacity_priest = get_attribute(player_id, Attributes.PRIEST_INCOME_BOOST_CAPACITY)
+    boost_capacity = get_attribute(player_id, Attributes.PRIESTS) * boost_capacity_priest
+    income_boost = get_attribute(player_id, Attributes.PRIEST_INCOME_BOOST_RATE) * min(population_bonus_power, boost_capacity)
 
     # Base income
     base_income = \
-        get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id, Attributes.INCOME_PER_FUNCTIONAL) + \
-        get_attribute(discord_id, Attributes.SOLDIERS) * get_attribute(discord_id, Attributes.INCOME_PER_SOLDIER) + \
-        get_attribute(discord_id, Attributes.PRIESTS) * get_attribute(discord_id, Attributes.INCOME_PER_PRIEST)
+        get_attribute(player_id, Attributes.FUNCTIONARIES) * get_attribute(player_id, Attributes.INCOME_PER_FUNCTIONAL) + \
+        get_attribute(player_id, Attributes.SOLDIERS) * get_attribute(player_id, Attributes.INCOME_PER_SOLDIER) + \
+        get_attribute(player_id, Attributes.PRIESTS) * get_attribute(player_id, Attributes.INCOME_PER_PRIEST)
 
     return income_boost+base_income
 
-def new_turn():
+def new_turn(game_id):
     # Increase turn counter
-    turn = current_turn() + 1
+    turn = current_turn(game_id) + 1
     with connect() as cursor:
-        cursor.execute("UPDATE system_variables SET value = ? WHERE name = ?", (turn, "turn"))
+        cursor.execute("UPDATE system_variables SET value = ? WHERE name = ? AND game_id = ?", (turn, "turn", game_id))
 
-    for discord_id in get_discord_ids():
+    for player_id in get_player_ids(game_id):
         # Grow population
-        growth_amount = get_attribute(discord_id, Attributes.FUNCTIONARIES) * get_attribute(discord_id, Attributes.PASSIVE_POPULATION_GROWTH_RATE)
-        insert_attribute(discord_id, Attributes.FUNCTIONARIES, growth_amount, turn, NEVER_EXPIRES)
+        growth_amount = get_attribute(player_id, Attributes.FUNCTIONARIES) * get_attribute(player_id, Attributes.PASSIVE_POPULATION_GROWTH_RATE)
+        insert_attribute(player_id, Attributes.FUNCTIONARIES, growth_amount, turn, NEVER_EXPIRES)
 
         # Check for and add income
         # Population bonus power
-        give_power(discord_id, calculate_income(discord_id))
+        give_power(player_id, calculate_income(player_id))
 
         # Reset attack army counter
-        attackers_to_add = get_army(discord_id) * get_attribute(discord_id,Attributes.ATTACKS_PER_TURN)
-        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, attackers_to_add, turn, turn)
+        attackers_to_add = get_army(player_id) * get_attribute(player_id,Attributes.ATTACKS_PER_TURN)
+        insert_attribute(player_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, attackers_to_add, turn, turn)
 
         # Reset priest channeling
-        priests = get_attribute(discord_id, Attributes.PRIESTS)
-        channeling_to_add = (priests * get_attribute(discord_id, Attributes.MAXIMUM_PRIEST_CHANNELING))
-        insert_attribute(discord_id, Attributes.TOTAL_PRIEST_POWER, channeling_to_add, turn, turn)
+        priests = get_attribute(player_id, Attributes.PRIESTS)
+        channeling_to_add = (priests * get_attribute(player_id, Attributes.MAXIMUM_PRIEST_CHANNELING))
+        insert_attribute(player_id, Attributes.TOTAL_PRIEST_POWER, channeling_to_add, turn, turn)
 
 
 # ----------------------------------------
 # Conversion
 # ----------------------------------------
-def attempt_conversion(player_discord, quantity, person_type, other_player_discord=None):
-    if person_type != "neutral" or (other_player_discord is None and person_type == "neutral"):
+def attempt_conversion(converter_player_id, quantity, person_type, target_player_id=None):
+    game_id = player_get_game(converter_player_id)
+    if target_player_id is not None and game_id != player_get_game(target_player_id):
+        return False, "Target is in a different game; you cannot interact with them"
+
+    if person_type != "neutral" or (target_player_id is None and person_type == "neutral"):
         if person_type == "neutral" or \
-           get_player_pantheon(player_discord) == NO_PANTHEON or \
-           get_player_pantheon(other_player_discord) == NO_PANTHEON or \
-           get_player_pantheon(player_discord) != get_player_pantheon(other_player_discord):
+           get_player_pantheon(converter_player_id) == NO_PANTHEON or \
+           get_player_pantheon(target_player_id) == NO_PANTHEON or \
+           get_player_pantheon(converter_player_id) != get_player_pantheon(target_player_id):
             if person_type == "enemy":
-                if quantity <= get_attribute(other_player_discord, Attributes.FUNCTIONARIES):
-                    conversion_rate = get_attribute(player_discord, Attributes.ENEMY_CONVERSION_RATE)
-                    attempt_cost = get_attribute(player_discord, Attributes.ENEMY_CONVERSION_COST)
+                if quantity <= get_attribute(target_player_id, Attributes.FUNCTIONARIES):
+                    conversion_rate = get_attribute(converter_player_id, Attributes.ENEMY_CONVERSION_RATE)
+                    attempt_cost = get_attribute(converter_player_id, Attributes.ENEMY_CONVERSION_COST)
                 else:
                     return False, "Insufficient functionaries"
             elif person_type == "enemy_priest":
-                if quantity <= get_attribute(other_player_discord, Attributes.PRIESTS):
-                    conversion_rate = get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_RATE)
-                    attempt_cost = get_attribute(player_discord, Attributes.ENEMY_PRIEST_CONVERSION_COST)
+                if quantity <= get_attribute(target_player_id, Attributes.PRIESTS):
+                    conversion_rate = get_attribute(converter_player_id, Attributes.ENEMY_PRIEST_CONVERSION_RATE)
+                    attempt_cost = get_attribute(converter_player_id, Attributes.ENEMY_PRIEST_CONVERSION_COST)
                 else:
                     return False, "Insufficient priests"
             elif person_type == "neutral":
-                conversion_rate = get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_RATE)
-                attempt_cost = get_attribute(player_discord, Attributes.NEUTRAL_CONVERSION_COST)
+                conversion_rate = get_attribute(converter_player_id, Attributes.NEUTRAL_CONVERSION_RATE)
+                attempt_cost = get_attribute(converter_player_id, Attributes.NEUTRAL_CONVERSION_COST)
             else:
                 return False, "Invalid type"
-            if attempt_cost * quantity <= get_power(player_discord):
-                if attempt_cost * quantity <= get_attribute(player_discord, Attributes.TOTAL_PRIEST_POWER):
-                    spend_power(player_discord, attempt_cost * quantity)
-                    spend_channeling_power(player_discord, attempt_cost * quantity)
+            if attempt_cost * quantity <= get_power(converter_player_id):
+                if attempt_cost * quantity <= get_attribute(converter_player_id, Attributes.TOTAL_PRIEST_POWER):
+                    spend_power(converter_player_id, attempt_cost * quantity)
+                    spend_channeling_power(converter_player_id, attempt_cost * quantity)
                     converts = calculate_converts(quantity, conversion_rate)
 
-                    turn = current_turn()
+                    turn = current_turn(game_id)
                     with connect() as cursor:
                         if person_type == "enemy_priest":
                             cursor.execute(
-                                "INSERT INTO player_attributes (discord_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
+                                "INSERT INTO player_attributes (player_id, attribute_id, value, start_turn, expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (other_player_discord, Attributes.PRIESTS, -converts, turn, NEVER_EXPIRES))
+                                (target_player_id, Attributes.PRIESTS, -converts, turn, NEVER_EXPIRES))
                         elif person_type == "enemy":
                             cursor.execute(
-                                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                                "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (other_player_discord, Attributes.FUNCTIONARIES, -converts, turn, NEVER_EXPIRES))
+                                (target_player_id, Attributes.FUNCTIONARIES, -converts, turn, NEVER_EXPIRES))
                             cursor.execute(
-                                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                                "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (player_discord, Attributes.FUNCTIONARIES, converts, turn, NEVER_EXPIRES))
+                                (converter_player_id, Attributes.FUNCTIONARIES, converts, turn, NEVER_EXPIRES))
                         elif person_type == "neutral":
                             cursor.execute(
-                                "INSERT INTO player_attributes (discord_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
+                                "INSERT INTO player_attributes (player_id, attribute_id, value,start_turn,expiry_turn) VALUES ("
                                 "?,?,?,?,?)",
-                                (player_discord, Attributes.FUNCTIONARIES, converts, turn, NEVER_EXPIRES))
+                                (converter_player_id, Attributes.FUNCTIONARIES, converts, turn, NEVER_EXPIRES))
                         else:
                             return False, "Something went wrong that should never go wrong. Congratulations, you broke my system."
                         return True, [converts, attempt_cost * quantity]
@@ -712,10 +755,10 @@ def calculate_converts(quantity, chance):
 # ----------------------------------------
 # Pantheons
 # ----------------------------------------
-def send_power(player_discord,other_player_discord,amount):
-    if get_power(player_discord) >= amount:
-        spend_power(player_discord,amount)
-        give_power(other_player_discord,amount)
+def send_power(source_id, target_id, amount):
+    if get_power(source_id) >= amount:
+        spend_power(source_id,amount)
+        give_power(target_id,amount)
         return True, "Sent."
     else:
         return False, "Insufficient DP."
@@ -728,53 +771,55 @@ def create_pantheon(display_name,description):
     return True, get_pantheon_by_name(name)
 
 
-def join_pantheon(discord_id,pantheon_id):
+def join_pantheon(player_id,pantheon_id):
     with connect() as cursor:
-        cursor.execute("UPDATE players SET pantheon = ? WHERE discord_id = ?",(pantheon_id,discord_id))
-    return True, "Successfully added {name} to {pantheon}.".format(name=get_player_info(discord_id)[2],
+        cursor.execute("UPDATE players SET pantheon = ? WHERE id = ?", (pantheon_id, player_id))
+    return True, "Successfully added {name} to {pantheon}.".format(name=get_player_info(player_id)[2],
                                                                    pantheon=get_pantheon(pantheon_id)[2])
 
 
-def leave_pantheon(discord_id):
+def leave_pantheon(player_id):
     with connect() as cursor:
-        cursor.execute("UPDATE players SET pantheon = -1 WHERE discord_id = ?", (discord_id,))
-        cursor.execute("INSERT INTO player_attributes (discord_id,attribute_id,value) VALUES (?,?,?)", (
-            discord_id,
+        cursor.execute("UPDATE players SET pantheon = -1 WHERE id = ?", (player_id,))
+        cursor.execute("INSERT INTO player_attributes (player_id, attribute_id, value) VALUES (?,?,?)", (
+            player_id,
             Attributes.ATTACK_ELIGIBLE_SOLDIERS,
-            get_attribute(discord_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS)))
-    return True, "Successfully removed {name} from their pantheon".format(name=get_player_info(discord_id)[2])
+            get_attribute(player_id,Attributes.ATTACK_ELIGIBLE_SOLDIERS)))
+    return True, "Successfully removed {name} from their pantheon".format(name=get_player_info(player_id)[2])
 
 
-def get_pantheon_id(discord_id):
-    pantheon_id = None
+def player_get_pantheon(player_id):
     with connect() as cursor:
-        cursor.execute("SELECT pantheon from players where discord_id = ?", (discord_id,))
-        pantheon_id = cursor.fetchone()[0]
-    return pantheon_id
+        cursor.execute("SELECT pantheon FROM players WHERE id = ?", (player_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        else:
+            return row[0]
 
 
 def get_pantheon(pantheon_id):
     pantheon = []
     with connect() as cursor:
-        cursor.execute("SELECT * from pantheons where id = ?", (pantheon_id,))
+        cursor.execute("SELECT * FROM pantheons WHERE id = ?", (pantheon_id,))
         for item in cursor.fetchone():
             pantheon.append(item)
 
     return pantheon
 
 
-def get_pantheon_by_name(name):
+def get_pantheon_by_name(name, game_id):
     pantheon = None
     with connect() as cursor:
-        cursor.execute("SELECT * from pantheons where name = ?", (name,))
+        cursor.execute("SELECT * FROM pantheons WHERE name = ? AND game_id = ?", (name, game_id))
         pantheon = cursor.fetchone()[0]
     return pantheon
 
 
-def get_player_pantheon(discord_id):
+def get_player_pantheon(player_id):
     pantheon = []
     with connect() as cursor:
-        cursor.execute("SELECT pantheon FROM players WHERE discord_id = ?", (discord_id,))
+        cursor.execute("SELECT pantheon FROM players WHERE id = ?", (player_id,))
         pantheon = cursor.fetchone()[0]
     return pantheon
 
@@ -782,7 +827,7 @@ def get_player_pantheon(discord_id):
 def get_pantheon_name(pantheon_id):
     name = None
     with connect() as cursor:
-        cursor.execute("SELECT name FROM pantheons WHERE id = ?", (pantheon_id,))
+        cursor.execute("SELECT display_name FROM pantheons WHERE id = ?", (pantheon_id,))
         row = cursor.fetchone()
         if row is None:
             return "None"
@@ -794,11 +839,11 @@ def get_pantheon_name(pantheon_id):
 # Battles
 # ----------------------------------------
 
-def get_buff_cost(discord_id,amount):
+def get_buff_cost(player_id, amount):
     casting_cost = 0
-    buffed_amount = get_attribute(discord_id, Attributes.DP_BUFF_POINTS)
-    soldier_count = get_army(discord_id)
-    buff_cost_multiplier = get_attribute(discord_id, Attributes.DP_BUFF_COST_MULTIPLIER)
+    buffed_amount = get_attribute(player_id, Attributes.DP_BUFF_POINTS)
+    soldier_count = get_army(player_id)
+    buff_cost_multiplier = get_attribute(player_id, Attributes.DP_BUFF_COST_MULTIPLIER)
     for i in range(amount):
         casting_cost += 2 ** (buffed_amount / 10)
         buffed_amount += 1
@@ -807,57 +852,62 @@ def get_buff_cost(discord_id,amount):
     return casting_cost
 
 
-def cast_buff(discord_id, attribute_id, amount, target=None):
+def cast_buff(source_id, attribute_id, amount, target_id=None):
     # Phase 1: Assertions
-    if target is None:
-        target = discord_id
-    
+    if target_id is None:
+        target_id = source_id
+    game_id = player_get_game(source_id)
+    if player_get_game(target_id) != source_id:
+        return False, "Target is in a diffferent game; you cannot interact with them"
     if attribute_id not in {Attributes.ATTACK, Attributes.DEFENSE, Attributes.ARMOR, Attributes.INITIATIVE}:
         return False, "Incorrect attribute. Must be attack, defense, armor, or initiative."
-    if not user_discord_id_exists(discord_id):
+    if not player_id_exists(source_id):
         return False, "User invalid"
-    if not user_discord_id_exists(target):
+    if not player_id_exists(target_id):
         return False, "Target invalid"
     if not attribute_exists(attribute_id):
         return False, "Attribute does not exist."
     
 
     # Phase 2: Calculate cost
-    casting_cost = get_buff_cost(discord_id,amount)
-    if get_power(discord_id) < casting_cost:
+    casting_cost = get_buff_cost(source_id,amount)
+    if get_power(source_id) < casting_cost:
         return False, "Not enough power"
 
     # Phase 3: Increase cost and spend DP
-    turn = current_turn()
-    spend_power(discord_id, casting_cost)
-    increase_attribute(discord_id, Attributes.DP_BUFF_POINTS, amount, turn)
-    increase_attribute(target, attribute_id, amount, turn)
+    turn = current_turn(game_id)
+    spend_power(source_id, casting_cost)
+    increase_attribute(source_id, Attributes.DP_BUFF_POINTS, amount, turn)
+    increase_attribute(target_id, attribute_id, amount, turn)
     return True, "Successfully buffed {name} by {amount}".format(name=get_attribute_name(attribute_id), amount=amount)
 
 
-def attack(discord_id, other_player_id, quantity):
-    if not user_discord_id_exists(discord_id):
+def attack(attacker_id, target_id, ordered_army_size):
+    if not player_id_exists(attacker_id):
         return None, "Attacker does not exist"
-    if not user_discord_id_exists(other_player_id):
+    if not player_id_exists(target_id):
         return None, "Defender does not exist"
+    game_id = player_get_game(attacker_id)
+    if game_id != player_get_game(target_id):
+        return None, "Target is in a different game; you cannot interact with them"
 
-    quantity = int(quantity)
-    available_attackers = get_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
-    if get_army(other_player_id) +\
-        get_attribute(other_player_id, Attributes.FUNCTIONARIES) +\
-        get_attribute(other_player_id, Attributes.PRIESTS) > 0:
-        if quantity != 0:
-            if quantity <= available_attackers:
-                attackers = quantity
-                attack_value = get_attribute(discord_id, Attributes.ATTACK)
+    ordered_army_size = int(ordered_army_size)
+    available_attackers = get_attribute(attacker_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS)
+    if get_army(target_id) + \
+        get_attribute(target_id, Attributes.FUNCTIONARIES) + \
+        get_attribute(target_id, Attributes.PRIESTS) > 0:
+        if ordered_army_size != 0:
+            if ordered_army_size <= available_attackers:
+                attackers = ordered_army_size
+                attack_value = get_attribute(attacker_id, Attributes.ATTACK)
 
-                attacker_initiative = get_attribute(discord_id, Attributes.INITIATIVE)
-                defender_initiative = get_attribute(discord_id, Attributes.INITIATIVE)
+                attacker_initiative = get_attribute(attacker_id, Attributes.INITIATIVE)
+                defender_initiative = get_attribute(attacker_id, Attributes.INITIATIVE)
 
                 
 
-                defenders = get_army(other_player_id)
-                defense_value = get_attribute(other_player_id, Attributes.DEFENSE)
+                defenders = get_army(target_id)
+                defense_value = get_attribute(target_id, Attributes.DEFENSE)
                 
                 damage_dealt = 0
                 damage_received = 0
@@ -875,7 +925,7 @@ def attack(discord_id, other_player_id, quantity):
                     first_strike_count = int(first_strike_count)
                     pre_clash_damage += generate_damage(first_strike_count, attack_value)
                     
-                    damage_dealt += deal_attack_damage(other_player_id, pre_clash_damage)
+                    damage_dealt += deal_attack_damage(target_id, pre_clash_damage)
                     first_strike_disabled_attackers = first_strike_count
                 elif attacker_initiative < defender_initiative:
                     pre_clash_damage = 0
@@ -888,14 +938,14 @@ def attack(discord_id, other_player_id, quantity):
                     first_strike_count = int(first_strike_count)
                     pre_clash_damage += generate_damage(first_strike_count, defense_value)
 
-                    damage_received += deal_defense_damage(discord_id, pre_clash_damage)
+                    damage_received += deal_defense_damage(attacker_id, pre_clash_damage)
                     first_strike_disabled_defenders = first_strike_count
                 
                 attack_damage = generate_damage(attackers - first_strike_disabled_attackers, attack_value)
                 defense_damage = generate_damage(defenders - first_strike_disabled_defenders, defense_value)
 
-                damage_received += deal_defense_damage(discord_id, defense_damage)
-                damage_dealt += deal_attack_damage(other_player_id, attack_damage)
+                damage_received += deal_defense_damage(attacker_id, defense_damage)
+                damage_dealt += deal_attack_damage(target_id, attack_damage)
 
                 # If some of the attackers die, then they're all ineligible anyway
                 # If all of them die, they're all ineligible
@@ -903,8 +953,8 @@ def attack(discord_id, other_player_id, quantity):
                 attackers_made_ineligible = attackers - damage_received
 
                 # This expires, automatically resetting it at the end of every turn
-                turn = current_turn()
-                insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -attackers_made_ineligible, turn, turn)
+                turn = current_turn(game_id)
+                insert_attribute(attacker_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -attackers_made_ineligible, turn, turn)
                 return True, [damage_dealt[1], damage_received]
             else:
                 return False, "Insufficient attackers available"
@@ -925,15 +975,15 @@ def expected_damage(player_discord, other_player_discord, quantity):
     return [[0, 0, 0], 0, 0]
 
 
-def get_army(discord_id):
-    pantheon = get_player_pantheon(discord_id)
+def get_army(player_id):
+    pantheon = get_player_pantheon(player_id)
     if pantheon == -1:
-        return get_attribute(discord_id,Attributes.SOLDIERS)
+        return get_attribute(player_id,Attributes.SOLDIERS)
     else:
         soldiers = 0
         players = []
         with connect() as cursor:
-            cursor.execute("SELECT discord_id FROM players WHERE pantheon = ?",(pantheon,))
+            cursor.execute("SELECT id FROM players WHERE pantheon = ?",(pantheon,))
             for item in cursor.fetchall():
                 players.append(item[0])
         for player in players:
@@ -941,18 +991,18 @@ def get_army(discord_id):
         return soldiers
 
 
-def deal_attack_damage(discord_id, damage):
+def deal_attack_damage(player_id, damage):
     remaining_damage = damage
-    available_defenders = get_army(discord_id)
-    available_functionaries = get_attribute(discord_id, Attributes.FUNCTIONARIES)
-    available_priests = get_attribute(discord_id, Attributes.PRIESTS)
+    available_defenders = get_army(player_id)
+    available_functionaries = get_attribute(player_id, Attributes.FUNCTIONARIES)
+    available_priests = get_attribute(player_id, Attributes.PRIESTS)
 
     defenders_killed = 0
     functionaries_killed = 0
     priests_killed = 0
 
     if remaining_damage > 0:
-        defender_armor = get_attribute(discord_id, Attributes.ARMOR)
+        defender_armor = get_attribute(player_id, Attributes.ARMOR)
 
         # Killed is damage divided by armor
         defenders_killed = int(remaining_damage / defender_armor)
@@ -962,52 +1012,52 @@ def deal_attack_damage(discord_id, damage):
         if defenders_killed > 0:
             if defenders_killed > available_defenders:
                 defenders_killed = available_defenders
-            kill(discord_id, defenders_killed, "soldiers")
+            kill(player_id, defenders_killed, "soldiers")
 
     if remaining_damage > 0:
-        functionary_armor = get_attribute(discord_id, Attributes.FUNCTIONARY_ARMOR)
+        functionary_armor = get_attribute(player_id, Attributes.FUNCTIONARY_ARMOR)
         functionaries_killed = int(remaining_damage / functionary_armor)
         remaining_damage -= available_functionaries * functionary_armor
         if functionaries_killed > 0:
             if functionaries_killed > available_functionaries:
                 functionaries_killed = available_functionaries
-            kill(discord_id, functionaries_killed, "functionaries")
+            kill(player_id, functionaries_killed, "functionaries")
 
     if remaining_damage > 0:
-        priest_armor = get_attribute(discord_id, Attributes.FUNCTIONARY_ARMOR)
+        priest_armor = get_attribute(player_id, Attributes.FUNCTIONARY_ARMOR)
         priests_killed = int(remaining_damage / priest_armor)
         remaining_damage -= available_priests * priest_armor
         if priests_killed > 0:
             if priests_killed > available_priests:
                 priests_killed = available_priests
-            kill(discord_id, priests_killed, "priests")
+            kill(player_id, priests_killed, "priests")
 
     return True, [defenders_killed, functionaries_killed, priests_killed]
 
 
-def deal_defense_damage(discord_id, damage):
-    soldiers = get_army(discord_id)
+def deal_defense_damage(player_id, damage):
+    soldiers = get_army(player_id)
     soldiers_killed = 0
     damage = int(damage)
     if soldiers >= damage:
         soldiers_killed = damage
-        kill(discord_id, damage, "soldiers")
+        kill(player_id, damage, "soldiers")
     else:
         soldiers_killed = soldiers
-        kill(discord_id, soldiers, "soldiers")
+        kill(player_id, soldiers, "soldiers")
     return soldiers_killed
 
 
-def kill(discord_id, quantity, type):
-    turn = current_turn()
+def kill(player_id, quantity, type):
+    turn = current_turn(player_get_game(player_id))
     if type == "soldiers":
-        insert_attribute(discord_id, Attributes.SOLDIERS, -quantity, turn, NEVER_EXPIRES)
+        insert_attribute(player_id, Attributes.SOLDIERS, -quantity, turn, NEVER_EXPIRES)
     elif type == "functionaries":
-        insert_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, turn, NEVER_EXPIRES)
+        insert_attribute(player_id, Attributes.FUNCTIONARIES, -quantity, turn, NEVER_EXPIRES)
     elif type == "priests":
-        insert_attribute(discord_id, Attributes.PRIESTS, -quantity, turn, NEVER_EXPIRES)
+        insert_attribute(player_id, Attributes.PRIESTS, -quantity, turn, NEVER_EXPIRES)
     elif type == "attackers":
-        insert_attribute(discord_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -quantity, turn, NEVER_EXPIRES)
+        insert_attribute(player_id, Attributes.ATTACK_ELIGIBLE_SOLDIERS, -quantity, turn, NEVER_EXPIRES)
     else:
         return False, "Incorrect type"
     return True, "Success"
@@ -1018,69 +1068,69 @@ def kill(discord_id, quantity, type):
 # Actions
 # ------------------------------
 
-def recruit_soldiers(discord_id, quantity):
+def recruit_soldiers(player_id, quantity):
     # Phase 1: Assertions
-    if not user_discord_id_exists(discord_id):
+    if not player_id_exists(player_id):
         return None
     quantity = int(quantity)
 
     # Phase 2: Actually changing stuff
-    functionary_count = get_attribute(discord_id, Attributes.FUNCTIONARIES)
+    functionary_count = get_attribute(player_id, Attributes.FUNCTIONARIES)
     if functionary_count < quantity:
         return False , "Impossible: not enough functionaries"
     
-    dp_cost = get_attribute(discord_id, Attributes.SOLDIER_COST) * quantity
-    power = get_power(discord_id)
+    dp_cost = get_attribute(player_id, Attributes.SOLDIER_COST) * quantity
+    power = get_power(player_id)
 
     if power < dp_cost: 
         return False , "Impossible: not enough power"
 
-    spend_power(discord_id, dp_cost)
-    increase_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
-    increase_attribute(discord_id, Attributes.SOLDIERS, quantity, NEVER_EXPIRES)
+    spend_power(player_id, dp_cost)
+    increase_attribute(player_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
+    increase_attribute(player_id, Attributes.SOLDIERS, quantity, NEVER_EXPIRES)
     return True, "Successfully created {soldiers} soldiers.".format(soldiers=quantity)
 
-def disband_soldiers(discord_id, quantity):
+def disband_soldiers(player_id, quantity):
     # Phase 1: Assertions
-    if not user_discord_id_exists(discord_id):
+    if not player_id_exists(player_id):
         return None
     quantity = int(quantity)
 
     # Phase 2: Actually changing stuff
-    soldier_count = get_attribute(discord_id, Attributes.SOLDIERS)
+    soldier_count = get_attribute(player_id, Attributes.SOLDIERS)
     if soldier_count < quantity:
         return False ,  "Impossible: not enough soldiers"
     
-    dp_cost = get_attribute(discord_id, Attributes.SOLDIER_DISBAND_COST) * quantity
-    power = get_power(discord_id)
+    dp_cost = get_attribute(player_id, Attributes.SOLDIER_DISBAND_COST) * quantity
+    power = get_power(player_id)
 
     if power < dp_cost:
         return False , "Impossible: not enough power"
     
-    spend_power(discord_id, dp_cost)
-    increase_attribute(discord_id, Attributes.SOLDIERS, -quantity, NEVER_EXPIRES)
-    increase_attribute(discord_id, Attributes.FUNCTIONARIES, quantity, NEVER_EXPIRES)
+    spend_power(player_id, dp_cost)
+    increase_attribute(player_id, Attributes.SOLDIERS, -quantity, NEVER_EXPIRES)
+    increase_attribute(player_id, Attributes.FUNCTIONARIES, quantity, NEVER_EXPIRES)
     return True, "Successfully disbanded {soldiers} soldiers".format(soldiers=quantity)
 
-def recruit_priests(discord_id, quantity):
-    if not user_discord_id_exists(discord_id):
+def recruit_priests(player_id, quantity):
+    if not player_id_exists(player_id):
         return False, "User doesn't exist"
     quantity = int(quantity)
 
-    functionary_count = get_attribute(discord_id, Attributes.FUNCTIONARIES)
+    functionary_count = get_attribute(player_id, Attributes.FUNCTIONARIES)
     if functionary_count < quantity:
         return False , "Impossible: not enough functionaries"
     
-    dp_cost = get_attribute(discord_id, Attributes.PRIEST_COST) * quantity
-    power = get_power(discord_id)
+    dp_cost = get_attribute(player_id, Attributes.PRIEST_COST) * quantity
+    power = get_power(player_id)
 
     if power < dp_cost:
         return False, "Impossible: not enough power"
     
-    spend_power(discord_id, dp_cost)
-    increase_attribute(discord_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
-    increase_attribute(discord_id, Attributes.PRIESTS, quantity, NEVER_EXPIRES)
+    spend_power(player_id, dp_cost)
+    increase_attribute(player_id, Attributes.FUNCTIONARIES, -quantity, NEVER_EXPIRES)
+    increase_attribute(player_id, Attributes.PRIESTS, quantity, NEVER_EXPIRES)
 
-    new_channeling_power = get_attribute(discord_id,Attributes.MAXIMUM_PRIEST_CHANNELING)*quantity
-    increase_attribute(discord_id,Attributes.TOTAL_PRIEST_POWER,new_channeling_power,NEVER_EXPIRES)
+    new_channeling_power = get_attribute(player_id,Attributes.MAXIMUM_PRIEST_CHANNELING)*quantity
+    increase_attribute(player_id,Attributes.TOTAL_PRIEST_POWER,new_channeling_power,NEVER_EXPIRES)
     return True, "Successfully added {priests} priests".format(priests=quantity)
