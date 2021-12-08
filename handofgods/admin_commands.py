@@ -50,6 +50,10 @@ class AdminCog(commands.Cog):
     @tech.command()
     async def delete(self, ctx: Context, name: str):
         raise NotImplementedError  # @TODO
+    
+    @user.command()
+    async def delete(self, ctx: Context, name: str):
+        raise NotImplementedError  # @TODO
 
 
 def setup(bot):
