@@ -11,6 +11,8 @@ import HelpfileReader
 import bot_admin
 import Attributes
 
+from handofgods.helpers import OneWord
+
 debug_mode = True
 PREFIX = "?"
 
@@ -62,7 +64,7 @@ async def version(ctx):
 
 
 @bot.command()
-async def join(ctx, name: str, *, must_be_none: Optional[str]):
+async def join(ctx, name: OneWord):
     if name.casefold() in {'me', 'my'}:
         await ctx.send("Sorry, player name cannot be a special word")
     if must_be_none is not None:
@@ -124,39 +126,6 @@ async def pantheon(ctx, first:str, second:str):
 
 
 @bot.command()
-<<<<<<< HEAD
-=======
-async def admin(ctx, *args):
-    discord_id = ctx.author.id
-    if len(args) == 0:
-        await ctx.send(HelpfileReader.read(PREFIX, ('admin',)))
-        return
-    if db.context_grants_admin(ctx):
-        if args[0] == 'tech':
-            await bot_admin.tech(bot, ctx, *(args[1:]))
-        elif args[0] == 'user':
-            await bot_admin.user(bot, ctx, *(args[1:]))
-        elif args[0] == "newturn":
-            await bot_admin.newturn(bot, ctx)
-        elif args[0] == 'kill':
-            await bot_admin.kill(bot, ctx)
-        elif args[0] == 'help':
-            await bot_admin.help(bot, ctx, *(args[1:]))
-        elif args[0] == 'pantheon':
-            await bot_admin.pantheon(bot, ctx, *(args[1:]))
-        elif args[0] == 'update':
-            await bot_admin.update()
-        elif args[0] == 'join':
-            await bot_admin.join(bot, ctx, *(args[1:]))
-        else:
-            await ctx.send('Admin command does not exist')
-    else:
-        await ctx.send("You're not an admin. You cannot beat the system. Big bird is watching you.")
-        return
-
-
-@bot.command()
->>>>>>> remotes/upstream/master
 async def info(ctx, name:str = None, info_type:str = None):
     import formatting
     game_id = db.get_game_id_from_context(ctx)
