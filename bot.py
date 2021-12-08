@@ -63,20 +63,11 @@ async def version(ctx):
             + f"```\n{stderr.decode()}\n```")
 
 
-@bot.command()
-async def join(ctx, name: OneWord):
-    if name.casefold() in {'me', 'my'}:
-        await ctx.send("Sorry, player name cannot be a special word")
-    if must_be_none is not None:
-        await ctx.send("Sorry, player name must be a single word")
-        return
-    result = db.create_player(name, ctx.author.id)
-    await ctx.send(result[1])
-    return
 
 
 @bot.command()
 async def send(ctx, name:str, amount:int):
+    """Send power to another player."""
     sender_id = db.get_player_id_from_context(ctx)
     receiver_id = db.get_player_by_name(name, db.get_game_id_from_context(ctx))
     results = db.send_power(sender_id, receiver_id, amount)
@@ -152,15 +143,9 @@ async def info(ctx, name:str = None, info_type:str = None):
     if name.casefold() == "me":
         player_id = db.get_player_id_from_context(ctx)
     else:
-<<<<<<< HEAD
-        discord_id = db.get_player_by_name(name)
-
-    if discord_id is None:
-=======
         player_id = db.get_player_by_name(name, db.get_game_id_from_context(ctx))
 
     if player_id is None:
->>>>>>> remotes/upstream/master
         await ctx.send('Player {name} does not exist'.format(name=name))
         return
 
