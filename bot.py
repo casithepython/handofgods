@@ -220,6 +220,7 @@ async def buff(ctx, name: str, attribute: str, amount: int = 1):
     try:
         attribute_id = db.get_attribute_id(attribute)
     except:  # @TODO: what kind of exception?
+        #      -> probably IndexError, need to confirm
         await ctx.send("Incorrect attribute.")
         return
 
