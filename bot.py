@@ -63,58 +63,7 @@ async def version(ctx):
             + f"```\n{stderr.decode()}\n```")
 
 
-@bot.command()
-async def send(ctx, name: str, amount: int):
-    """Send power to another player."""
-    sender_id = db.get_player_id_from_context(ctx)
-    receiver_id = db.get_player_by_name(name, db.get_game_id_from_context(ctx))
-    results = db.send_power(sender_id, receiver_id, amount)
-    await ctx.send(results[1])
-    return
 
-
-@bot.command()
-async def pantheon(ctx, first: str, second: str):
-    def check_author(author):
-        def inner_check(message):
-            if message.author.id != author.id:
-                return False
-            return True
-        return inner_check
-    player_id = db.get_player_id_from_context(ctx)
-    if first == "create":
-        if db.player_get_pantheon(player_id) != -1:
-            await ctx.send(
-                "You must leave your current pantheon"
-                + "before you can create a new one.")
-            return
-
-        name = second
-        await ctx.send("Please enter the description.")
-        description = await bot.wait_for(
-            'message', timeout=30.0, check=check_author(ctx.author))
-        description = description.content
-        results = db.create_pantheon(name, description)
-        db.join_pantheon(ctx.author.id, db.get_pantheon_by_name(name))  # @FIXME: I probably merged this wrong lol
-        await ctx.send(results[1])
-        return
-    elif first == "leave":
-        from user_interaction import user_react_on_message
-        output = "> Are you sure you want to leave your pantheon?\n> " \
-                 ":thumbsup: Yes\n> " \
-                 ":thumbsdown: No"
-        do_leave = await user_react_on_message(bot, ctx, output, ctx.author, {
-            '\N{THUMBS UP SIGN}': True,
-            '\N{THUMBS DOWN SIGN}': False,
-        })
-
-        if do_leave:
-            results = db.leave_pantheon(ctx.author.id)
-            await ctx.send(results[1])
-            return
-        else:
-            await ctx.send("Canceled.")
-            return
 
 
 @bot.command()
