@@ -6,6 +6,7 @@ from handofgods.helpers import OneWord
 
 class AdminCog(commands.Cog):
     async def cog_check(self, ctx: Context):
+        # makes all commands in this cog require the Manage Guild permission
         return commands.has_permissions(manage_guild=True)
 
     @commands.group(invoke_without_command=True)
